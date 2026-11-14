@@ -2,13 +2,13 @@
  "id": "./",
  "name": "HSK 3 – Giáo trình New HSK",
  "short_name": "HSK 3",
- "description": "Flashcard, thứ tự nét và luyện viết 1029 từ HSK 3 theo giáo trình New HSK 1–3",
+ "description": "Flashcard, thứ tự nét, luyện nghe và thi thử 1029 từ HSK 3 theo giáo trình New HSK 1–3",
  "lang": "vi",
  "start_url": "./",
  "scope": "./",
  "display": "standalone",
- "background_color": "#f7f5f1",
- "theme_color": "#f7f5f1",
+ "background_color": "#f3eee3",
+ "theme_color": "#f3eee3",
  "icons": [
   {
    "src": "icon-192.png",
