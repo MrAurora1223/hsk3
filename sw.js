@@ -1,5 +1,5 @@
 // Service worker cho app HSK 3: chạy offline, tự cập nhật ngầm.
-const V = 'hsk3-app-5b9a267db7';
+const V = 'hsk3-app-9a04304f68';
 const FONTS = 'hsk3-fonts';
 const CORE = ['./', './index.html', './manifest.webmanifest', './icon-192.png', './icon-512.png', './icon-maskable-512.png', './apple-touch-icon.png'];
 
