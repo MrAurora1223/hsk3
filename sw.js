@@ -1,6 +1,7 @@
 // Service worker cho app HSK 3: chạy offline, tự cập nhật ngầm.
-const V = 'hsk3-app-9a04304f68';
-const FONTS = 'hsk3-fonts';
+const PREFIX = 'hsk3-app-';
+const V = PREFIX + '9a04304f68';
+const FONTS = 'hsk-fonts';
 const CORE = ['./', './index.html', './manifest.webmanifest', './icon-192.png', './icon-512.png', './icon-maskable-512.png', './apple-touch-icon.png'];
 
 self.addEventListener('install', e => {
@@ -10,7 +11,7 @@ self.addEventListener('install', e => {
 
 self.addEventListener('activate', e => {
   e.waitUntil(caches.keys()
-    .then(ks => Promise.all(ks.filter(k => k !== V && k !== FONTS).map(k => caches.delete(k))))
+    .then(ks => Promise.all(ks.filter(k => k.startsWith(PREFIX) && k !== V).map(k => caches.delete(k))))  // chỉ dọn bộ đệm của app này (hsk3 và hsk5 chung domain)
     .then(() => self.clients.claim()));
 });
 
