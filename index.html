@@ -238,7 +238,7 @@ function toast(m) { const t = $('#toast'); t.textContent = m; t.classList.add('o
 // ---------- state ----------
 // S.c[order] = [box, dueN, lapses, introN, updatedMs]; S.d[N][device] = [seconds, newCount, reviewCount, correctCount]
 const LS_KEY = 'hsk3-giaotrinh-v1';
-const APPV = '2026.11.14';
+const APPV = '2026.11.14b';
 let S = { c: {}, d: {}, w: {}, set: { rate: 0.8, pyFront: false, modes: ['nghia','chu','nghe','viet'] } };
 let DEV = 'd' + Math.random().toString(36).slice(2, 8);
 try { const x = JSON.parse(localStorage.getItem(LS_KEY) || 'null'); if (x && x.c) S = Object.assign(S, x); const dv = localStorage.getItem(LS_KEY + '-dev'); if (dv) DEV = dv; else localStorage.setItem(LS_KEY + '-dev', DEV); } catch (e) {}
@@ -429,8 +429,20 @@ function srcTag(x) { return x[10] === 'mr' ? '<span class="tag mr">mở rộng</
 
 // ---------- speech ----------
 let zhVoice = null;
-function pickVoice() { try { const vs = speechSynthesis.getVoices(); zhVoice = vs.find(v => /zh[-_]CN/i.test(v.lang)) || vs.find(v => /^zh/i.test(v.lang)) || null; } catch (e) {} }
-try { pickVoice(); speechSynthesis.onvoiceschanged = pickVoice; } catch (e) {}
+let zhVoices = [];
+// điểm chất lượng: Premium > Enhanced/Natural > giọng online > giọng gọn mặc định
+const vq = v => { const s = (v.voiceURI || '') + ' ' + v.name; return /premium/i.test(s) ? 3 : /enhanced|natural|neural/i.test(s) ? 2 : /online|google/i.test(s) ? 1 : 0; };
+const vLabel = v => ['', ' · online', ' · Enhanced', ' · Premium'][vq(v)];
+function pickVoice() {
+  try {
+    const vs = speechSynthesis.getVoices();
+    const cn = vs.filter(v => /^zh[-_]CN/i.test(v.lang)).sort((a, b) => vq(b) - vq(a));
+    zhVoices = cn.concat(vs.filter(v => /^zh/i.test(v.lang) && !/^zh[-_]CN/i.test(v.lang)));
+    // tự chọn chỉ lấy giọng Phổ thông đại lục (zh-CN), không lấy giọng Đài Loan/Quảng Đông
+    zhVoice = (S.set.voice && zhVoices.find(v => v.voiceURI === S.set.voice)) || cn[0] || zhVoices[0] || null;
+  } catch (e) {}
+}
+try { pickVoice(); speechSynthesis.onvoiceschanged = () => { pickVoice(); if (view === 'settings' && !inSession()) vSettings(); }; } catch (e) {}
 function say(t) {
   try {
     speechSynthesis.cancel(); const u = new SpeechSynthesisUtterance(t); u.lang = 'zh-CN'; u.rate = S.set.rate || 0.8; if (zhVoice) u.voice = zhVoice; speechSynthesis.speak(u);
@@ -766,7 +778,7 @@ function vStats() {
 
 // ---------- SETTINGS ----------
 function vSettings() {
-  $('#app').innerHTML = '<div class="card"><h2>Phát âm</h2><label class="small">Tốc độ đọc: <b id="rv">' + S.set.rate + '</b></label><input type="range" id="rate" min="0.5" max="1.2" step="0.1" value="' + S.set.rate + '" style="width:100%"><div class="row" style="margin-top:8px"><button class="btn" id="test">Nghe thử 你好，我是学生。</button></div><p class="small mute">' + (zhVoice ? 'Đang dùng giọng: ' + esc(zhVoice.name) : 'Chưa thấy giọng tiếng Trung. Windows: Cài đặt → Thời gian và ngôn ngữ → Giọng nói → thêm Chinese (Simplified). Android thiếu giọng: Cài đặt → Chuyển văn bản thành giọng nói → Google → cài dữ liệu Chinese. iPhone thường có sẵn.') + '</p></div>' +
+  $('#app').innerHTML = '<div class="card"><h2>Phát âm</h2><label class="small">Tốc độ đọc: <b id="rv">' + S.set.rate + '</b></label><input type="range" id="rate" min="0.5" max="1.2" step="0.1" value="' + S.set.rate + '" style="width:100%"><div class="row" style="margin-top:8px"><button class="btn" id="test">Nghe thử 你好，我是学生。</button></div><p class="small mute">' + (zhVoices.length ? '<select id="vsel" style="margin-top:8px"><option value="">Tự chọn giọng tốt nhất (Phổ thông đại lục)</option>' + zhVoices.map(v => '<option value="' + esc(v.voiceURI) + '"' + (S.set.voice === v.voiceURI ? ' selected' : '') + '>' + esc(v.name + ' · ' + v.lang + vLabel(v)) + '</option>').join('') + '</select>' : '') + (zhVoice ? 'Đang dùng giọng: <b>' + esc(zhVoice.name + vLabel(zhVoice)) + '</b> (' + esc(zhVoice.lang) + ')' : 'Chưa thấy giọng tiếng Trung. Windows: Cài đặt → Thời gian và ngôn ngữ → Giọng nói → thêm Chinese (Simplified). Android thiếu giọng: Cài đặt → Chuyển văn bản thành giọng nói → Google → cài dữ liệu Chinese. iPhone thường có sẵn.') + '</p></div>' +
     '<div class="card"><h2>Thẻ</h2><label><input type="checkbox" id="pyf"' + (S.set.pyFront ? ' checked' : '') + '> Hiện pinyin ở mặt trước (kiểu nhìn chữ → nghĩa)</label></div>' +
     '<div class="card"><h2>Đồng bộ điện thoại ↔ máy tính</h2>' + (G ?
       '<p class="small">Đang đồng bộ qua gist bí mật của <b>' + esc(G.login) + '</b>. Trạng thái: <span id="syncst">' + esc(syncMsg) + '</span></p>' +
@@ -778,6 +790,7 @@ function vSettings() {
     '<div class="card small mute">1029 từ = 1000 từ đề cương HSK 3.0 + 29 từ mở rộng của sách, xếp theo bài giáo trình New HSK 1–3. Ngày 1 = thứ Hai 16/11/2026. Thi 16/5/2027.<br>Thứ tự nét và chấm nét: Hanzi Writer (MIT); dữ liệu nét chữ: Make Me a Hanzi / hanzi-writer-data (Arphic Public License).</div>';
   $('#rate').oninput = e => { S.set.rate = +e.target.value; $('#rv').textContent = S.set.rate; saveLocal(); };
   $('#test').onclick = () => say('你好，我是学生。');
+  const vsel = $('#vsel'); if (vsel) vsel.onchange = e => { S.set.voice = e.target.value; saveLocal(); pickVoice(); say('你好，我是学生。'); vSettings(); };
   $('#pyf').onchange = e => { S.set.pyFront = e.target.checked; saveLocal(); };
   const copy = async (txt, ok) => { try { await navigator.clipboard.writeText(txt); toast(ok); } catch (e) { window.prompt('Chép thủ công:', txt); } };
   const on = (id, f) => { const el = $(id); if (el) el.onclick = f; };
