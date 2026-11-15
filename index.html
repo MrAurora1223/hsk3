@@ -528,7 +528,7 @@ function toast(m) { const t = $('#toast'); t.textContent = m; t.classList.add('o
 // ---------- state ----------
 // S.c[order] = [box, dueN, lapses, introN, updatedMs]; S.d[N][device] = [seconds, newCount, reviewCount, correctCount]
 const LS_KEY = 'hsk3-giaotrinh-v1';
-const APPV = '2026.11.14k';
+const APPV = '2026.11.14l';
 let S = { c: {}, d: {}, w: {}, x: [], t: [], k: [], r: [], s: {}, e: {}, set: { rate: 0.8, pyFront: false, tone: true, modes: ['nghia','chu','nghe','viet'] } };
 let DEV = 'd' + Math.random().toString(36).slice(2, 8);
 try { const x = JSON.parse(localStorage.getItem(LS_KEY) || 'null'); if (x && x.c) S = Object.assign(S, x); const dv = localStorage.getItem(LS_KEY + '-dev'); if (dv) DEV = dv; else localStorage.setItem(LS_KEY + '-dev', DEV); } catch (e) {}
@@ -1602,26 +1602,31 @@ function drawSpeak(q, head) {
     const tx = $('#qtx'); if (tx) tx.classList.remove('hide'); const sh2 = $('#qshow'); if (sh2) sh2.remove();
   };
   const said = $('#said'); if (said) said.onclick = done;
-  const stopRec = () => { if (mr && mr.state !== 'inactive') mr.stop(); };
+  let rec = null, recChunks = null, busy = false;
+  const stopRec = async () => {
+    if (!rec || busy) return; busy = true; clearInterval(tick);
+    const r = rec; rec = null; $('#mic').classList.remove('on'); $('#mict').textContent = 'Đang xử lý…';
+    const out = await finishRecorder(r, recChunks); if (run) run.stream = null; busy = false;
+    if (url) URL.revokeObjectURL(url); url = null;
+    if (!$('#mict')) return;
+    if (!out.blob) { $('#mict').textContent = emptyMicText(out); logErr('rec empty ' + out.kind + ' size ' + out.size + ' peak ' + (out.peak || 0).toFixed(3) + ' frames ' + out.frames); if (!$('#sok')) done(); return; }
+    url = URL.createObjectURL(out.blob);
+    $('#mict').textContent = 'Đã ghi ' + Math.round((Date.now() - t0) / 1000) + ' giây · bấm nút đỏ để ghi lại';
+    $('#pb').classList.remove('hide');
+    if (!$('#sok')) done();
+  };
   $('#mic').onclick = async () => {
     if (!canRec()) return toast('Máy này không ghi âm được trong app');
-    if (mr && mr.state === 'recording') return stopRec();
+    if (rec) return stopRec();
+    if (busy) return;
+    busy = true;
     try {
-      const chunks = []; const rr = await startRecorder(chunks);
-      if (!run) { rr.stream.getTracks().forEach(t => t.stop()); sessPlay(); return; }
-      run.stream = rr.stream; mr = rr.mr; const mt = rr.mt;
-      mr.onstop = () => {
-        clearInterval(tick); stopMic(); // nhả micro để loa ngoài phát lại to bình thường
-        $('#mic').classList.remove('on');
-        if (url) URL.revokeObjectURL(url);
-        url = URL.createObjectURL(new Blob(chunks, { type: mr.mimeType || mt || 'audio/mp4' }));
-        $('#mict').textContent = 'Đã ghi ' + Math.round((Date.now() - t0) / 1000) + ' giây · bấm nút đỏ để ghi lại';
-        $('#pb').classList.remove('hide');
-        if (!$('#sok')) done();
-      };
+      recChunks = []; const r = await startRecorder(recChunks); busy = false;
+      if (!run || !$('#mic')) { finishRecorder(r, recChunks); return; }
+      rec = r; run.stream = r.stream;
       t0 = Date.now(); $('#mic').classList.add('on'); haptic();
       tick = setInterval(() => { const g = Math.round((Date.now() - t0) / 1000); const el = $('#mict'); if (el) el.textContent = 'Đang ghi… ' + g + '/' + q.lim + ' giây · bấm để dừng'; if (g >= q.lim) stopRec(); }, 250);
-    } catch (e) { stopMic(); logErr('mic ' + (e && e.name) + ' ' + (e && e.step)); toast(micErrText(e)); }
+    } catch (e) { busy = false; stopMic(); logErr('mic ' + (e && e.name) + ' ' + (e && e.step)); toast(micErrText(e)); }
   };
   $('#pme').onclick = () => { if (!url) return; try { if (aud) aud.pause(); aud = new Audio(url); aud.play(); } catch (e) {} };
   const pmo = $('#pmo'); if (pmo) pmo.onclick = () => say(q.say);
@@ -1959,6 +1964,7 @@ function sayDlg(lines, qtext) {
   try {
     const ss = speechSynthesis; if (ss.speaking || ss.pending) ss.cancel();
     try { ss.resume(); } catch (e) {}
+    sessPlay();
     const V = dlgVoices(); sayDlg.q = [];
     const mk = (t, v, pitch) => { const u = new SpeechSynthesisUtterance(t); u.lang = 'zh-CN'; u.rate = rateNow(); if (v) u.voice = v; u.pitch = pitch; sayDlg.q.push(u); ss.speak(u); };
     lines.forEach(l => { const t = l[1].map(x => sTok(x).h).join(''); if (l[0] === 'M') mk(t, V.m, V.same ? 0.65 : 1); else mk(t, V.f, V.same ? 1.2 : 1); });
@@ -2220,9 +2226,9 @@ function startMode(type) {
 }
 
 // ---------- 5. KIỂM TRA MÁY ----------
-let diagRes = null;
+let diagRes = null, diagClip = null;
 function vDiag() {
-  const h = '<div class="row" style="margin-bottom:12px"><button class="btn" id="dback">‹ Cài đặt</button></div><div class="card"><h2>Kiểm tra máy</h2><p class="small mute" style="margin-top:0">Trước khi chạy: tắt chế độ im lặng, tăng âm lượng. Bấm chạy, đợi khoảng 15 giây: máy đọc thử 2 câu, hỏi quyền micro và rung nhẹ một lần. Xong bấm "Chép kết quả" gửi t nếu có mục báo lỗi.</p><button class="btn p wide" id="drun">Chạy kiểm tra</button><div id="dlist" style="margin-top:12px"></div></div>';
+  const h = '<div class="row" style="margin-bottom:12px"><button class="btn" id="dback">‹ Cài đặt</button></div><div class="card"><h2>Kiểm tra máy</h2><p class="small mute" style="margin-top:0">Trước khi chạy: tắt chế độ im lặng, tăng âm lượng, tháo tai nghe Bluetooth. Bấm chạy, đợi khoảng 20 giây: máy đọc thử 2 câu, ghi âm thử 2,5 giây (lúc đó nói "你好，我是学生") và rung nhẹ một lần. Xong bấm "Chép kết quả" gửi t nếu có mục báo lỗi.</p><button class="btn p wide" id="drun">Chạy kiểm tra</button><div id="dlist" style="margin-top:12px"></div></div>';
   $('#app').innerHTML = h;
   $('#dback').onclick = () => { meTab = 'set'; vMe(); };
   $('#drun').onclick = runDiag;
@@ -2239,11 +2245,12 @@ function drawDiag() {
     r[0] = yes ? 'ok' : 'warn'; r[2] = yes ? 'Có rung · đã bật rung khi lật và chấm thẻ' : 'Không rung: máy này không cho ứng dụng web rung. Đã tắt rung, app vẫn chạy bình thường.'; drawDiag();
   });
   el.querySelectorAll('[data-sndhelp]').forEach(a => a.onclick = ev => { ev.preventDefault(); soundHelp(); });
+  el.querySelectorAll('[data-clip]').forEach(b => b.onclick = () => { if (diagClip) { sessPlay(); const a = new Audio(diagClip); a.play().catch(() => toast('Không phát được bản ghi')); } });
   const c = $('#dcopy'); if (c) c.onclick = async () => { const txt = 'Kiểm tra app HSK3 ' + APPV + ' · ' + new Date().toLocaleString('vi-VN') + '\n' + diagRes.map(r => '[' + r[0] + '] ' + r[1] + ': ' + r[2].replace(/<[^>]+>/g, '')).join('\n') + (errLog().length ? '\nLỗi gần đây:\n' + errLog().join('\n') : ''); try { await navigator.clipboard.writeText(txt); toast('Đã chép, dán vào chat với Claude'); } catch (e) { window.prompt('Chép thủ công:', txt); } };
 }
 async function runDiag() {
   const set = (name, st, txt) => { const r = diagRes.find(z => z[1] === name); if (r) { r[0] = st; r[2] = txt; } else diagRes.push([st, name, txt]); drawDiag(); };
-  diagRes = [];
+  diagRes = []; sessPlay();
   const ua = navigator.userAgent, ios = (ua.match(/OS (\d+)[_.](\d+)/) || []).slice(1).join('.');
   const standalone = !!(navigator.standalone || (window.matchMedia && matchMedia('(display-mode: standalone)').matches));
   set('Phiên bản', 'ok', APPV + (ios ? ' · iOS ' + ios : '') + (navigator.audioSession ? ' · phiên âm thanh: ' + navigator.audioSession.type : '') + ' · ' + (standalone ? 'đang chạy dạng app cài trên màn hình chính' : 'đang mở trong trình duyệt'));
@@ -2261,10 +2268,12 @@ async function runDiag() {
   else {
     set('Micro (luyện nói)', 'wait', 'Đang xin quyền và ghi thử 1,5 giây…');
     try {
+      set('Micro (luyện nói)', 'wait', 'Đang ghi thử 2,5 giây: nói "你好，我是学生" vào máy…');
       const chunks = [], rr = await startRecorder(chunks);
-      const size = await new Promise(res => { rr.mr.onstop = () => res(chunks.reduce((a, b) => a + b.size, 0)); setTimeout(() => { try { rr.mr.stop(); } catch (e) { res(0); } }, 1500); });
-      rr.stream.getTracks().forEach(t => t.stop()); sessPlay();
-      set('Micro (luyện nói)', size > 0 ? 'ok' : 'bad', size > 0 ? 'Ghi được ' + (size / 1024).toFixed(1) + ' KB (' + esc(rr.mt) + ')' : 'Ghi âm rỗng');
+      await sleep(2500);
+      const out = await finishRecorder(rr, chunks);
+      if (out.blob) { diagClip = URL.createObjectURL(out.blob); set('Micro (luyện nói)', 'ok', 'Ghi được ' + (out.size / 1024).toFixed(1) + ' KB bằng ' + out.kind + ' · mức to nhất ' + Math.min(100, Math.round(100 * out.peak)) + '% <button class="btn small" data-clip="1">Nghe lại</button>'); }
+      else { logErr('diag rec empty size ' + out.size + ' peak ' + (out.peak || 0).toFixed(3) + ' frames ' + out.frames); set('Micro (luyện nói)', 'bad', esc(emptyMicText(out)) + ' [MediaRecorder ' + out.size + ' byte, tín hiệu ' + (out.frames || 0) + ' khối]'); }
     } catch (e) { logErr('diag mic ' + (e && e.name) + ' ' + (e && e.step)); set('Micro (luyện nói)', 'bad', esc(micErrText(e))); }
   }
   if (SRec) {
@@ -2336,6 +2345,7 @@ function say(t) {
   try {
     const ss = speechSynthesis;
     unlockAudio();
+    if (!(run && run.stream)) { try { if (navigator.audioSession && navigator.audioSession.type !== 'playback') navigator.audioSession.type = 'playback'; } catch (e) {} }
     if ((ss.speaking || ss.pending) && !(lastU && lastU.__unlock)) ss.cancel();
     try { ss.resume(); } catch (e) {}
     const mk = () => { const u = new SpeechSynthesisUtterance(t); u.lang = 'zh-CN'; u.rate = rateNow(); u.volume = 1; if (zhVoice) u.voice = zhVoice; return u; };
@@ -2497,6 +2507,96 @@ function logErr(m) { try { const a = JSON.parse(localStorage.getItem(ERRK) || '[
 const errLog = () => { try { return JSON.parse(localStorage.getItem(ERRK) || '[]'); } catch (e) { return []; } };
 window.addEventListener('error', e => logErr((e.message || 'error') + (e.lineno ? ' @' + e.lineno : '')));
 window.addEventListener('unhandledrejection', e => logErr('promise: ' + ((e.reason && (e.reason.message || e.reason.name)) || e.reason)));
+
+
+// =====================================================================
+// 14l: ghi âm 2 đường. iOS: MediaRecorder đôi khi trả file rỗng →
+// đồng thời thu thẳng tín hiệu từ micro bằng Web Audio rồi tự đóng thành WAV; đường nào có tiếng thì dùng.
+// =====================================================================
+async function startRecorder(chunks) {
+  // tạo AudioContext ngay lúc chạm (trước mọi await), nếu không iOS để nó ở trạng thái tạm dừng
+  let ctx = null;
+  try { const AC = window.AudioContext || window.webkitAudioContext; if (AC) { ctx = new AC(); if (ctx.resume) ctx.resume(); } } catch (e) { ctx = null; }
+  try { speechSynthesis.cancel(); } catch (e) {}
+  sessRec();
+  await sleep(250);
+  let lastErr = null, step = 'getUserMedia';
+  for (let attempt = 0; attempt < 2; attempt++) {
+    let stream = null;
+    try {
+      step = 'getUserMedia';
+      stream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: true } });
+      const tr = stream.getAudioTracks()[0];
+      if (!tr || tr.readyState !== 'live') throw Object.assign(new Error('micro chưa sẵn sàng'), { name: 'TrackNotLive' });
+      const rec = { stream, mr: null, mt: '', pcm: [], rate: 44100, ctx, peak: 0, src: null, proc: null };
+      // đường 1: thu tín hiệu (Web Audio)
+      if (ctx) {
+        try {
+          if (ctx.state !== 'running' && ctx.resume) await ctx.resume();
+          rec.rate = ctx.sampleRate;
+          rec.src = ctx.createMediaStreamSource(stream);
+          rec.proc = ctx.createScriptProcessor(4096, 1, 1);
+          rec.proc.onaudioprocess = e => { const d = e.inputBuffer.getChannelData(0); rec.pcm.push(new Float32Array(d)); for (let i = 0; i < d.length; i += 16) { const v = Math.abs(d[i]); if (v > rec.peak) rec.peak = v; } };
+          rec.src.connect(rec.proc); rec.proc.connect(ctx.destination);
+        } catch (e) { logErr('webaudio ' + (e && e.name)); }
+      }
+      // đường 2: MediaRecorder (có chia nhỏ 500 ms để không mất phần cuối)
+      step = 'MediaRecorder';
+      if (window.MediaRecorder) {
+        for (const t of ['audio/mp4', 'audio/webm;codecs=opus', 'audio/webm', '']) {
+          if (t && !(MediaRecorder.isTypeSupported && MediaRecorder.isTypeSupported(t))) continue;
+          try {
+            const mr = t ? new MediaRecorder(stream, { mimeType: t }) : new MediaRecorder(stream);
+            mr.ondataavailable = e => { if (e.data && e.data.size) chunks.push(e.data); };
+            mr.start(500);
+            rec.mr = mr; rec.mt = mr.mimeType || t || 'audio/mp4';
+            break;
+          } catch (e) { lastErr = e; }
+        }
+      }
+      if (rec.mr || rec.proc) return rec;
+    } catch (e) {
+      lastErr = e;
+      if (e && e.name === 'NotAllowedError') { if (stream) stream.getTracks().forEach(t => t.stop()); sessPlay(); throw e; }
+    }
+    if (stream) stream.getTracks().forEach(t => t.stop());
+    try { if (navigator.audioSession) navigator.audioSession.type = 'auto'; } catch (e) {}
+    await sleep(500);
+  }
+  try { if (ctx) ctx.close(); } catch (e) {}
+  sessPlay();
+  const err = lastErr || new Error('mic'); err.step = step; throw err;
+}
+// dừng ghi, đợi phần dữ liệu cuối, chọn đường có tiếng; trả về {blob, kind, size, peak}
+async function finishRecorder(rec, chunks) {
+  if (rec.mr && rec.mr.state !== 'inactive') {
+    await new Promise(res => { let ok = false; const fin = () => { if (!ok) { ok = true; setTimeout(res, 200); } }; rec.mr.addEventListener('stop', fin); try { rec.mr.stop(); } catch (e) { fin(); } setTimeout(fin, 1500); });
+  }
+  try { if (rec.proc) { rec.proc.onaudioprocess = null; rec.proc.disconnect(); } if (rec.src) rec.src.disconnect(); } catch (e) {}
+  try { rec.stream.getTracks().forEach(t => t.stop()); } catch (e) {}
+  try { if (rec.ctx) rec.ctx.close(); } catch (e) {}
+  sessPlay();
+  const mrSize = chunks.reduce((a, b) => a + b.size, 0);
+  const hasPcm = rec.pcm.length > 2 && rec.peak > 0.002;
+  // ưu tiên MediaRecorder nếu có dữ liệu thật; nếu thu tín hiệu cho thấy im lặng tuyệt đối mà MediaRecorder có file, vẫn dùng file đó
+  if (mrSize > 3000) return { blob: new Blob(chunks, { type: rec.mt || 'audio/mp4' }), kind: 'MediaRecorder', size: mrSize, peak: rec.peak };
+  if (hasPcm) { const w = encodeWav(rec.pcm, rec.rate); return { blob: w, kind: 'WAV', size: w.size, peak: rec.peak }; }
+  return { blob: null, kind: 'none', size: mrSize, peak: rec.peak, frames: rec.pcm.length };
+}
+// Float32 nhiều khối → WAV 16 kHz 16-bit mono
+function encodeWav(blocks, rate) {
+  const total = blocks.reduce((a, b) => a + b.length, 0), all = new Float32Array(total); let o = 0;
+  blocks.forEach(b => { all.set(b, o); o += b.length; });
+  const out = 16000, ratio = rate / out, n = Math.floor(total / ratio), pcm = new Int16Array(n);
+  for (let i = 0; i < n; i++) { const a = Math.floor(i * ratio), b = Math.min(total, Math.floor((i + 1) * ratio)); let s = 0; for (let j = a; j < b; j++) s += all[j]; const v = Math.max(-1, Math.min(1, s / Math.max(1, b - a))); pcm[i] = v < 0 ? v * 0x8000 : v * 0x7fff; }
+  const buf = new ArrayBuffer(44 + pcm.length * 2), dv = new DataView(buf);
+  const ws = (p, s) => { for (let i = 0; i < s.length; i++) dv.setUint8(p + i, s.charCodeAt(i)); };
+  ws(0, 'RIFF'); dv.setUint32(4, 36 + pcm.length * 2, true); ws(8, 'WAVE'); ws(12, 'fmt '); dv.setUint32(16, 16, true); dv.setUint16(20, 1, true); dv.setUint16(22, 1, true);
+  dv.setUint32(24, out, true); dv.setUint32(28, out * 2, true); dv.setUint16(32, 2, true); dv.setUint16(34, 16, true); ws(36, 'data'); dv.setUint32(40, pcm.length * 2, true);
+  new Int16Array(buf, 44).set(pcm);
+  return new Blob([buf], { type: 'audio/wav' });
+}
+const emptyMicText = out => 'Micro mở được nhưng không thu được tiếng (mức to nhất ' + Math.min(100, Math.round(100 * (out.peak || 0))) + '%). Kiểm tra: đang gọi điện hoặc app khác dùng micro; tai nghe Bluetooth đang kết nối (micro chuyển sang tai nghe); ốp lưng che lỗ micro. Tắt hẳn app rồi mở lại thử.';
 
 render();
 boot();
