@@ -394,6 +394,13 @@ main.fade{animation:tabin .22s ease-out}
 body.insess .tbtn{bottom:calc(var(--sab) + 120px)}
 ol.help{text-align:left;padding-left:20px;margin:8px 0}
 ol.help li{margin:8px 0;font-size:14.5px;line-height:1.45}
+
+/* ---------- 14k ---------- */
+.pron{text-align:center;margin:4px 0 8px}
+.pron #pronr{margin-top:8px;line-height:1.5}
+.pchars{font-size:24px;letter-spacing:2px;margin:6px 0}
+.pchars .ph{color:var(--ok)}.pchars .pm{color:var(--acc);text-decoration:underline}
+.pverd{font:700 15px var(--round)}.pverd.y{color:var(--ok)}.pverd.m{color:var(--warn)}.pverd.n{color:var(--acc)}
 </style>
 </head>
 <body>
@@ -521,7 +528,7 @@ function toast(m) { const t = $('#toast'); t.textContent = m; t.classList.add('o
 // ---------- state ----------
 // S.c[order] = [box, dueN, lapses, introN, updatedMs]; S.d[N][device] = [seconds, newCount, reviewCount, correctCount]
 const LS_KEY = 'hsk3-giaotrinh-v1';
-const APPV = '2026.11.14j';
+const APPV = '2026.11.14k';
 let S = { c: {}, d: {}, w: {}, x: [], t: [], k: [], r: [], s: {}, e: {}, set: { rate: 0.8, pyFront: false, tone: true, modes: ['nghia','chu','nghe','viet'] } };
 let DEV = 'd' + Math.random().toString(36).slice(2, 8);
 try { const x = JSON.parse(localStorage.getItem(LS_KEY) || 'null'); if (x && x.c) S = Object.assign(S, x); const dv = localStorage.getItem(LS_KEY + '-dev'); if (dv) DEV = dv; else localStorage.setItem(LS_KEY + '-dev', DEV); } catch (e) {}
@@ -1580,9 +1587,10 @@ function drawSpeak(q, head) {
   app.innerHTML = head + '<div class="qcard deck in">' + top + '<div class="ask">' + txt[0] + '</div>' + (txt[1] ? '<button class="btn ghost small" id="qshow" style="margin-top:6px">' + txt[1] + '</button>' : '') + '</div>' +
     '<div class="micbox"><button class="mic" id="mic" aria-label="Ghi âm"><span class="dot"></span></button><div class="mict" id="mict">' + (canRec() ? 'Bấm để ghi âm (tối đa ' + q.lim + ' giây)' : 'Máy này không ghi âm được trong app: nói to rồi tự chấm') + '</div>' +
     '<div class="row hide" id="pb" style="justify-content:center"><button class="btn" id="pme">Nghe lại mình</button>' + (q.sk !== 'pic' ? '<button class="btn" id="pmo">Nghe mẫu</button>' : '') + '</div></div>' +
-    '<div id="fb"></div><div class="gbar"><div class="in" id="gb">' + (canRec() ? '' : '<button class="btn" id="said">Nói xong</button>') + '</div></div>';
+    pronBox(q) + '<div id="fb"></div><div class="gbar"><div class="in" id="gb">' + (canRec() ? '' : '<button class="btn" id="said">Nói xong</button>') + '</div></div>';
   $('#stop').onclick = () => { stopMic(); leave(); render(); };
   if (q.say) { say(q.say); $('#qsp').onclick = () => say(q.say); }
+  bindPron(q);
   const sh = $('#qshow'); if (sh) sh.onclick = () => { $('#qtx').classList.remove('hide'); sh.remove(); };
   let mr = null, url = null, tick = null, t0 = 0, aud = null;
   const done = () => {
@@ -1598,12 +1606,10 @@ function drawSpeak(q, head) {
   $('#mic').onclick = async () => {
     if (!canRec()) return toast('Máy này không ghi âm được trong app');
     if (mr && mr.state === 'recording') return stopRec();
-    try { speechSynthesis.cancel(); } catch (e) {}
     try {
-      run.stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      const mt = ['audio/mp4', 'audio/webm;codecs=opus', 'audio/webm'].find(t => MediaRecorder.isTypeSupported && MediaRecorder.isTypeSupported(t));
-      const chunks = []; mr = new MediaRecorder(run.stream, mt ? { mimeType: mt } : undefined);
-      mr.ondataavailable = e => { if (e.data && e.data.size) chunks.push(e.data); };
+      const chunks = []; const rr = await startRecorder(chunks);
+      if (!run) { rr.stream.getTracks().forEach(t => t.stop()); sessPlay(); return; }
+      run.stream = rr.stream; mr = rr.mr; const mt = rr.mt;
       mr.onstop = () => {
         clearInterval(tick); stopMic(); // nhả micro để loa ngoài phát lại to bình thường
         $('#mic').classList.remove('on');
@@ -1613,9 +1619,9 @@ function drawSpeak(q, head) {
         $('#pb').classList.remove('hide');
         if (!$('#sok')) done();
       };
-      mr.start(); t0 = Date.now(); $('#mic').classList.add('on'); haptic();
+      t0 = Date.now(); $('#mic').classList.add('on'); haptic();
       tick = setInterval(() => { const g = Math.round((Date.now() - t0) / 1000); const el = $('#mict'); if (el) el.textContent = 'Đang ghi… ' + g + '/' + q.lim + ' giây · bấm để dừng'; if (g >= q.lim) stopRec(); }, 250);
-    } catch (e) { stopMic(); toast(e && e.name === 'NotAllowedError' ? 'Chưa cho phép micro: Cài đặt iPhone → Safari → Micro' : 'Không mở được micro'); }
+    } catch (e) { stopMic(); logErr('mic ' + (e && e.name) + ' ' + (e && e.step)); toast(micErrText(e)); }
   };
   $('#pme').onclick = () => { if (!url) return; try { if (aud) aud.pause(); aud = new Audio(url); aud.play(); } catch (e) {} };
   const pmo = $('#pmo'); if (pmo) pmo.onclick = () => say(q.say);
@@ -2233,18 +2239,18 @@ function drawDiag() {
     r[0] = yes ? 'ok' : 'warn'; r[2] = yes ? 'Có rung · đã bật rung khi lật và chấm thẻ' : 'Không rung: máy này không cho ứng dụng web rung. Đã tắt rung, app vẫn chạy bình thường.'; drawDiag();
   });
   el.querySelectorAll('[data-sndhelp]').forEach(a => a.onclick = ev => { ev.preventDefault(); soundHelp(); });
-  const c = $('#dcopy'); if (c) c.onclick = async () => { const txt = 'Kiểm tra app HSK3 ' + APPV + ' · ' + new Date().toLocaleString('vi-VN') + '\n' + diagRes.map(r => '[' + r[0] + '] ' + r[1] + ': ' + r[2].replace(/<[^>]+>/g, '')).join('\n'); try { await navigator.clipboard.writeText(txt); toast('Đã chép, dán vào chat với Claude'); } catch (e) { window.prompt('Chép thủ công:', txt); } };
+  const c = $('#dcopy'); if (c) c.onclick = async () => { const txt = 'Kiểm tra app HSK3 ' + APPV + ' · ' + new Date().toLocaleString('vi-VN') + '\n' + diagRes.map(r => '[' + r[0] + '] ' + r[1] + ': ' + r[2].replace(/<[^>]+>/g, '')).join('\n') + (errLog().length ? '\nLỗi gần đây:\n' + errLog().join('\n') : ''); try { await navigator.clipboard.writeText(txt); toast('Đã chép, dán vào chat với Claude'); } catch (e) { window.prompt('Chép thủ công:', txt); } };
 }
 async function runDiag() {
   const set = (name, st, txt) => { const r = diagRes.find(z => z[1] === name); if (r) { r[0] = st; r[2] = txt; } else diagRes.push([st, name, txt]); drawDiag(); };
   diagRes = [];
   const ua = navigator.userAgent, ios = (ua.match(/OS (\d+)[_.](\d+)/) || []).slice(1).join('.');
   const standalone = !!(navigator.standalone || (window.matchMedia && matchMedia('(display-mode: standalone)').matches));
-  set('Phiên bản', 'ok', APPV + (ios ? ' · iOS ' + ios : '') + ' · ' + (standalone ? 'đang chạy dạng app cài trên màn hình chính' : 'đang mở trong trình duyệt'));
+  set('Phiên bản', 'ok', APPV + (ios ? ' · iOS ' + ios : '') + (navigator.audioSession ? ' · phiên âm thanh: ' + navigator.audioSession.type : '') + ' · ' + (standalone ? 'đang chạy dạng app cài trên màn hình chính' : 'đang mở trong trình duyệt'));
   // giọng đọc
   let vs = []; try { vs = speechSynthesis.getVoices(); } catch (e) {}
   const zh = vs.filter(v => /^zh/i.test(v.lang)), V = dlgVoices();
-  set('Giọng tiếng Trung', zh.length ? 'ok' : 'bad', zh.length ? zh.length + ' giọng: ' + esc(zh.slice(0, 6).map(v => v.name + ' (' + v.lang + ')').join(', ')) : 'Không thấy giọng tiếng Trung nào');
+  set('Giọng tiếng Trung', zh.length ? 'ok' : 'bad', zh.length ? zh.length + ' giọng: ' + esc([...new Set(zh.map(v => v.name + ' (' + v.lang + (/enhanced|premium/i.test(v.voiceURI || '') ? ', nâng cao' : '') + ')'))].join(', ')) : 'Không thấy giọng tiếng Trung nào');
   set('Giọng nam cho hội thoại', V.same ? 'warn' : 'ok', V.same ? 'Máy chỉ có giọng nữ; app hạ cao độ để giả giọng nam. Muốn giọng nam thật: Cài đặt iPhone → Trợ năng → Nội dung được đọc → Giọng nói → Tiếng Trung → tải giọng Li-mu.' : 'Có giọng nam: ' + esc(V.m.name));
   set('Đọc thử', 'wait', 'Đang đọc 你好…');
   try { if (navigator.audioSession) navigator.audioSession.type = 'playback'; } catch (e) {}
@@ -2255,17 +2261,19 @@ async function runDiag() {
   else {
     set('Micro (luyện nói)', 'wait', 'Đang xin quyền và ghi thử 1,5 giây…');
     try {
-      const st = await navigator.mediaDevices.getUserMedia({ audio: true });
-      const mt = ['audio/mp4', 'audio/webm;codecs=opus', 'audio/webm'].find(t => MediaRecorder.isTypeSupported && MediaRecorder.isTypeSupported(t));
-      const chunks = [], mr = new MediaRecorder(st, mt ? { mimeType: mt } : undefined);
-      mr.ondataavailable = e => { if (e.data && e.data.size) chunks.push(e.data); };
-      const size = await new Promise(res => { mr.onstop = () => res(chunks.reduce((a, b) => a + b.size, 0)); mr.start(); setTimeout(() => { try { mr.stop(); } catch (e) { res(0); } }, 1500); });
-      st.getTracks().forEach(t => t.stop());
-      set('Micro (luyện nói)', size > 0 ? 'ok' : 'bad', size > 0 ? 'Ghi được ' + (size / 1024).toFixed(1) + ' KB (' + (mt || 'mặc định') + ')' : 'Ghi âm rỗng');
-    } catch (e) { set('Micro (luyện nói)', 'bad', e && e.name === 'NotAllowedError' ? 'Chưa cho phép micro: Cài đặt iPhone → Safari (hoặc tên app) → Micro → Cho phép' : 'Không mở được micro (' + esc(e && e.name || '') + ')'); }
+      const chunks = [], rr = await startRecorder(chunks);
+      const size = await new Promise(res => { rr.mr.onstop = () => res(chunks.reduce((a, b) => a + b.size, 0)); setTimeout(() => { try { rr.mr.stop(); } catch (e) { res(0); } }, 1500); });
+      rr.stream.getTracks().forEach(t => t.stop()); sessPlay();
+      set('Micro (luyện nói)', size > 0 ? 'ok' : 'bad', size > 0 ? 'Ghi được ' + (size / 1024).toFixed(1) + ' KB (' + esc(rr.mt) + ')' : 'Ghi âm rỗng');
+    } catch (e) { logErr('diag mic ' + (e && e.name) + ' ' + (e && e.step)); set('Micro (luyện nói)', 'bad', esc(micErrText(e))); }
   }
+  if (SRec) {
+    set('Máy chấm phát âm', 'wait', 'Đang thử nhận dạng giọng nói 2 giây (không cần nói)…');
+    try { await recognize(2); set('Máy chấm phát âm', 'ok', 'Dùng được: trong Luyện nói có nút "Máy nghe và chấm"'); }
+    catch (e) { const fine = e && (e.name === 'no-speech' || e.name === 'aborted'); set('Máy chấm phát âm', fine ? 'ok' : 'warn', fine ? 'Dùng được: trong Luyện nói có nút "Máy nghe và chấm"' : esc(recErrText(e))); }
+  } else set('Máy chấm phát âm', 'warn', 'Máy này không có nhận dạng giọng nói trong app; luyện nói vẫn ghi âm và tự nghe lại được.');
   if (navigator.mediaDevices && window.MediaRecorder) {
-    try { if (navigator.audioSession) navigator.audioSession.type = 'playback'; } catch (e) {}
+    sessPlay(); await sleep(300);
     const spoke2 = await speakTest('谢谢');
     set('Đọc lại sau khi dùng micro', spoke2 === true ? 'ok' : 'bad', spoke2 === true ? 'Vẫn phát được tiếng sau khi dùng micro' : 'Sau khi dùng micro máy không phát tiếng nữa: tắt hẳn app rồi mở lại');
   }
@@ -2375,6 +2383,120 @@ function soundHelp() {
 // rung: iPhone không có rung cho web; app dùng mẹo công tắc của iOS 18 trở lên
 const iosVer = () => { const m = navigator.userAgent.match(/OS (\d+)[_.](\d+)/); return m ? +m[1] + (+m[2]) / 100 : null; };
 function hapticForce() { try { if (navigator.vibrate) navigator.vibrate(20); else { const l = $('#hpl'); if (l) l.click(); } } catch (e) {} }
+
+
+// =====================================================================
+// 14k: phiên âm thanh iOS (phát ↔ ghi), micro chắc chắn hơn, máy chấm phát âm, nhật ký lỗi
+// =====================================================================
+// iOS: phiên "playback" không cho mở micro (lỗi InvalidStateError) → trước khi ghi phải chuyển sang "play-and-record",
+// ghi xong chuyển lại "playback" để loa ngoài phát to bình thường.
+function sessPlay() { try { if (navigator.audioSession) navigator.audioSession.type = 'playback'; } catch (e) {} }
+function sessRec() { try { if (navigator.audioSession) navigator.audioSession.type = 'play-and-record'; } catch (e) { try { navigator.audioSession.type = 'auto'; } catch (e2) {} } }
+const sleep = ms => new Promise(r => setTimeout(r, ms));
+function stopMic() { try { if (run && run.stream) { run.stream.getTracks().forEach(t => t.stop()); run.stream = null; } } catch (e) {} sessPlay(); }
+// mở micro + bắt đầu ghi; thử lại tối đa 2 lần, thử nhiều định dạng; trả về {stream, mr, mt, step}
+async function startRecorder(chunks) {
+  try { speechSynthesis.cancel(); } catch (e) {}
+  sessRec();
+  await sleep(250);
+  let lastErr = null, step = 'getUserMedia';
+  for (let attempt = 0; attempt < 2; attempt++) {
+    let stream = null;
+    try {
+      step = 'getUserMedia';
+      stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const tr = stream.getAudioTracks()[0];
+      if (!tr || tr.readyState !== 'live') throw Object.assign(new Error('micro chưa sẵn sàng'), { name: 'TrackNotLive' });
+      step = 'MediaRecorder';
+      for (const t of ['audio/mp4', 'audio/webm;codecs=opus', 'audio/webm', '']) {
+        if (t && !(MediaRecorder.isTypeSupported && MediaRecorder.isTypeSupported(t))) continue;
+        try {
+          const mr = t ? new MediaRecorder(stream, { mimeType: t }) : new MediaRecorder(stream);
+          mr.ondataavailable = e => { if (e.data && e.data.size) chunks.push(e.data); };
+          mr.start();
+          return { stream, mr, mt: mr.mimeType || t || 'audio/mp4', step };
+        } catch (e) { lastErr = e; }
+      }
+    } catch (e) {
+      lastErr = e;
+      if (e && e.name === 'NotAllowedError') { if (stream) stream.getTracks().forEach(t => t.stop()); sessPlay(); throw e; }
+    }
+    if (stream) stream.getTracks().forEach(t => t.stop());
+    // lần 2: thử chế độ tự động của iOS
+    try { if (navigator.audioSession) navigator.audioSession.type = 'auto'; } catch (e) {}
+    await sleep(500);
+  }
+  sessPlay();
+  const err = lastErr || new Error('mic'); err.step = step; throw err;
+}
+const micErrText = e => e && e.name === 'NotAllowedError' ? 'Chưa cho phép micro: Cài đặt iPhone → cuộn xuống tìm Safari (hoặc app HSK 3) → Micro → Cho phép' : 'Không mở được micro (' + ((e && e.name) || 'lỗi') + (e && e.step ? ' ở bước ' + e.step : '') + '). Tắt hẳn app rồi mở lại; còn lỗi thì chạy Kiểm tra máy và gửi kết quả.';
+
+// ---------- máy nghe và chấm phát âm (nhận dạng giọng nói của iPhone, nếu máy cho dùng) ----------
+const SRec = window.SpeechRecognition || window.webkitSpeechRecognition || null;
+const NUMZH = { '0': '零', '1': '一', '2': '二', '3': '三', '4': '四', '5': '五', '6': '六', '7': '七', '8': '八', '9': '九' };
+const normZh = s => (s || '').replace(/[0-9]/g, d => NUMZH[d]).replace(/[^\u4e00-\u9fff]/g, '');
+function recognize(lim, onPart) {
+  return new Promise((res, rej) => {
+    if (!SRec) return rej(Object.assign(new Error('Máy không có nhận dạng giọng nói'), { name: 'unsupported' }));
+    try { speechSynthesis.cancel(); } catch (e) {}
+    sessRec();
+    let best = '', ended = false;
+    const r = new SRec(); r.lang = 'zh-CN'; r.interimResults = true; r.continuous = false; r.maxAlternatives = 1;
+    r.onresult = e => { best = Array.from(e.results).map(x => x[0].transcript).join(''); if (onPart) onPart(best); };
+    r.onerror = e => { if (ended) return; ended = true; sessPlay(); rej(Object.assign(new Error(e.error || 'lỗi'), { name: e.error || 'error' })); };
+    r.onend = () => { if (ended) return; ended = true; sessPlay(); res(best); };
+    try { r.start(); } catch (e) { ended = true; sessPlay(); return rej(e); }
+    recognize.cur = r;
+    setTimeout(() => { try { r.stop(); } catch (e) {} }, (lim || 8) * 1000);
+  });
+}
+// so khớp từng chữ (dãy con chung dài nhất): chữ nào của câu mẫu được nghe thấy
+function matchChars(target, heard) {
+  const a = [...target], b = [...heard], n = a.length, m = b.length;
+  const L = Array.from({ length: n + 1 }, () => new Array(m + 1).fill(0));
+  for (let i = n - 1; i >= 0; i--) for (let j = m - 1; j >= 0; j--) L[i][j] = a[i] === b[j] ? L[i + 1][j + 1] + 1 : Math.max(L[i + 1][j], L[i][j + 1]);
+  const hit = new Array(n).fill(false); let i = 0, j = 0;
+  while (i < n && j < m) { if (a[i] === b[j]) { hit[i] = true; i++; j++; } else if (L[i + 1][j] >= L[i][j + 1]) i++; else j++; }
+  return hit;
+}
+const recErrText = e => ({ 'not-allowed': 'Chưa cho phép nhận dạng giọng nói: Cài đặt iPhone → Quyền riêng tư & Bảo mật → Nhận dạng giọng nói → bật cho Safari/app', 'service-not-allowed': 'iPhone không cho app ngoài màn hình chính dùng nhận dạng giọng nói. Mở app bằng Safari thì có thể dùng được.', 'no-speech': 'Máy không nghe thấy gì, nói to và gần máy hơn', 'network': 'Nhận dạng giọng nói tiếng Trung cần mạng', 'audio-capture': 'Không lấy được tiếng từ micro', 'unsupported': 'Máy này không có nhận dạng giọng nói' }[e && e.name] || 'Không chấm được (' + ((e && e.name) || 'lỗi') + ')');
+// khối "Máy chấm" trong màn luyện nói
+function pronBox(q) {
+  if (!SRec) return '';
+  return '<div class="pron"><button class="btn" id="pron">Máy nghe và chấm</button><div id="pronr" class="small mute">' + (q.sk === 'rep' ? 'Đọc to câu mẫu, máy so từng chữ.' : q.sk === 'pic' ? 'Nói một câu có từ này, máy kiểm tra có nghe thấy từ đó không.' : 'Trả lời bằng giọng nói, máy ghi lại câu m nói.') + '</div></div>';
+}
+function bindPron(q) {
+  const b = $('#pron'); if (!b) return;
+  b.onclick = async () => {
+    const box = $('#pronr'); b.disabled = true; b.textContent = 'Đang nghe… nói đi';
+    try {
+      const heard = await recognize(q.lim > 15 ? 15 : 10, t => { box.textContent = 'Máy nghe: ' + t; });
+      const h = normZh(heard);
+      let html = '<div>Máy nghe: <span class="hz">' + (esc(heard) || '(không nghe rõ)') + '</span></div>';
+      if (q.sk === 'rep') {
+        const tg = normZh(q.say), hit = matchChars(tg, h), sc = tg.length ? Math.round(100 * hit.filter(Boolean).length / tg.length) : 0;
+        html += '<div class="pchars hz">' + [...tg].map((c, i) => '<span class="' + (hit[i] ? 'ph' : 'pm') + '">' + c + '</span>').join('') + '</div><div class="pverd ' + (sc >= 85 ? 'y' : sc >= 60 ? 'm' : 'n') + '">' + sc + '% · ' + (sc >= 85 ? 'rất tốt' : sc >= 60 ? 'khá, đọc lại các chữ đỏ' : 'chưa đạt, nghe mẫu rồi đọc lại chậm hơn') + '</div>';
+        logQ({ qt: 'pron' }, sc >= 85);
+      } else if (q.sk === 'pic') {
+        const w = normZh(BYO[q.word][5]), ok = h.includes(w);
+        html += '<div class="pverd ' + (ok ? 'y' : 'n') + '">' + (ok ? 'Có dùng từ ' + esc(BYO[q.word][5]) : 'Máy chưa nghe thấy từ ' + esc(BYO[q.word][5])) + '</div>';
+        logQ({ qt: 'pron' }, ok);
+      }
+      box.innerHTML = html;
+    } catch (e) { box.textContent = recErrText(e); }
+    b.disabled = false; b.textContent = 'Chấm lại';
+  };
+}
+TYPES.pron = 'Máy chấm phát âm';
+SKILLS.find(z => z[0] === 's')[2].push('pron');
+MODE_OF.pron = 'srep';
+
+// ---------- nhật ký lỗi (chỉ lưu trên máy, kèm vào kết quả Kiểm tra máy) ----------
+const ERRK = LS_KEY + '-errlog';
+function logErr(m) { try { const a = JSON.parse(localStorage.getItem(ERRK) || '[]'); a.push(new Date().toISOString().slice(5, 16).replace('T', ' ') + ' ' + APPV + ' ' + String(m).slice(0, 180)); localStorage.setItem(ERRK, JSON.stringify(a.slice(-15))); } catch (e) {} }
+const errLog = () => { try { return JSON.parse(localStorage.getItem(ERRK) || '[]'); } catch (e) { return []; } };
+window.addEventListener('error', e => logErr((e.message || 'error') + (e.lineno ? ' @' + e.lineno : '')));
+window.addEventListener('unhandledrejection', e => logErr('promise: ' + ((e.reason && (e.reason.message || e.reason.name)) || e.reason)));
 
 render();
 boot();
