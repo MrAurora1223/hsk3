@@ -387,6 +387,13 @@ main.fade{animation:tabin .22s ease-out}
 .drow b{font:650 14.5px var(--round)}
 .dst{flex:none;width:24px;height:24px;border-radius:99px;display:inline-flex;align-items:center;justify-content:center;font-weight:800;font-size:13px;color:#fff;margin-top:1px}
 .dst.ok{background:var(--ok)}.dst.bad{background:var(--acc)}.dst.warn{background:var(--warn)}.dst.wait,.dst.ask{background:var(--mute)}
+
+/* ---------- 14j ---------- */
+.tbtn{position:fixed;left:50%;bottom:calc(var(--tabh) + var(--sab) + 14px);transform:translate(-50%,10px);z-index:61;border:0;background:var(--acc);color:#fff;padding:12px 16px;border-radius:14px;font:600 14px var(--round);opacity:0;pointer-events:none;transition:opacity .2s,transform .2s;max-width:90vw;box-shadow:var(--shadow)}
+.tbtn.on{opacity:1;pointer-events:auto;transform:translate(-50%,0)}
+body.insess .tbtn{bottom:calc(var(--sab) + 120px)}
+ol.help{text-align:left;padding-left:20px;margin:8px 0}
+ol.help li{margin:8px 0;font-size:14.5px;line-height:1.45}
 </style>
 </head>
 <body>
@@ -514,7 +521,7 @@ function toast(m) { const t = $('#toast'); t.textContent = m; t.classList.add('o
 // ---------- state ----------
 // S.c[order] = [box, dueN, lapses, introN, updatedMs]; S.d[N][device] = [seconds, newCount, reviewCount, correctCount]
 const LS_KEY = 'hsk3-giaotrinh-v1';
-const APPV = '2026.11.14i';
+const APPV = '2026.11.14j';
 let S = { c: {}, d: {}, w: {}, x: [], t: [], k: [], r: [], s: {}, e: {}, set: { rate: 0.8, pyFront: false, tone: true, modes: ['nghia','chu','nghe','viet'] } };
 let DEV = 'd' + Math.random().toString(36).slice(2, 8);
 try { const x = JSON.parse(localStorage.getItem(LS_KEY) || 'null'); if (x && x.c) S = Object.assign(S, x); const dv = localStorage.getItem(LS_KEY + '-dev'); if (dv) DEV = dv; else localStorage.setItem(LS_KEY + '-dev', DEV); } catch (e) {}
@@ -1411,11 +1418,11 @@ function vStats() {
 }
 function vSettings() {
   const tl = '<span class="tlegend"><span class="t1">mā</span><span class="t2">má</span><span class="t3">mǎ</span><span class="t4">mà</span><span class="t0">ma</span></span>';
-  $('#app').innerHTML = meHead() + '<div class="card"><div class="row" style="justify-content:space-between;flex-wrap:nowrap"><div><h2 style="margin:0">Kiểm tra máy</h2><span class="small mute">Giọng đọc, micro, rung, bộ nhớ, đồng bộ</span></div><button class="btn p" id="diag">Chạy</button></div></div>' + '<div class="card"><h2>Phát âm</h2><label class="sw"><span><b>Tốc độ theo giáo trình</b><br><span class="small mute">HSK 1: 0.8 · HSK 2: 0.9 · HSK 3: 1.0. Luyện đề, luyện nói luôn 1.0 như đề thi. Hiện tại: ' + rateNow() + '</span></span><input type="checkbox" id="rauto"' + (S.set.rateAuto === false ? '' : ' checked') + '></label>' + (S.set.rateAuto === false ? '<label class="small">Tốc độ cố định: <b id="rv">' + S.set.rate + '</b></label><input type="range" id="rate" min="0.5" max="1.2" step="0.1" value="' + S.set.rate + '" style="width:100%">' : '') + '<div class="row" style="margin-top:8px"><button class="btn" id="test">Nghe thử 你好，我是学生。</button></div><p class="small mute">' + (zhVoices.length ? '<select id="vsel" style="margin:8px 0">' + '<option value="">' + (isIOS() ? 'Tự chọn (iPhone: dùng giọng mặc định của máy)' : 'Tự chọn giọng tốt nhất (Phổ thông đại lục)') + '</option>' + '<option value="' + SYS + '"' + (S.set.voice === SYS ? ' selected' : '') + '>Giọng mặc định của máy (theo Cài đặt hệ thống)</option>' + zhVoices.map((v, i) => '<option value="' + esc(zhKeys[i]) + '"' + (S.set.voice === zhKeys[i] ? ' selected' : '') + '>' + esc(voiceName(i)) + '</option>').join('') + '</select>' : '') + (useSys && zhVoices.length ? 'Đang dùng: <b>giọng mặc định của máy</b>' + (isIOS() ? ' = giọng chọn ở Cài đặt iPhone → Trợ năng → Nội dung được đọc → Giọng nói → Tiếng Trung → Mandarin.' : '.') : zhVoice ? 'Đang dùng giọng: <b>' + esc(voiceName(zhVoices.indexOf(zhVoice))) + '</b>' : 'Chưa thấy giọng tiếng Trung. Windows: Cài đặt → Thời gian và ngôn ngữ → Giọng nói → thêm Chinese (Simplified). Android thiếu giọng: Cài đặt → Chuyển văn bản thành giọng nói → Google → cài dữ liệu Chinese. iPhone thường có sẵn.') + '</p></div>' +
+  $('#app').innerHTML = meHead() + '<div class="card"><div class="row" style="justify-content:space-between;flex-wrap:nowrap"><div><h2 style="margin:0">Kiểm tra máy</h2><span class="small mute">Giọng đọc, micro, rung, bộ nhớ, đồng bộ</span></div><button class="btn p" id="diag">Chạy</button></div></div>' + '<div class="card"><h2>Phát âm</h2><label class="sw"><span><b>Tốc độ theo giáo trình</b><br><span class="small mute">HSK 1: 0.8 · HSK 2: 0.9 · HSK 3: 1.0. Luyện đề, luyện nói luôn 1.0 như đề thi. Hiện tại: ' + rateNow() + '</span></span><input type="checkbox" id="rauto"' + (S.set.rateAuto === false ? '' : ' checked') + '></label>' + (S.set.rateAuto === false ? '<label class="small">Tốc độ cố định: <b id="rv">' + S.set.rate + '</b></label><input type="range" id="rate" min="0.5" max="1.2" step="0.1" value="' + S.set.rate + '" style="width:100%">' : '') + '<div class="row" style="margin-top:8px"><button class="btn" id="test">Nghe thử 你好，我是学生。</button><button class="btn ghost" id="sndh">Không nghe thấy tiếng?</button></div><p class="small mute">' + (zhVoices.length ? '<select id="vsel" style="margin:8px 0">' + '<option value="">' + (isIOS() ? 'Tự chọn (iPhone: dùng giọng mặc định của máy)' : 'Tự chọn giọng tốt nhất (Phổ thông đại lục)') + '</option>' + '<option value="' + SYS + '"' + (S.set.voice === SYS ? ' selected' : '') + '>Giọng mặc định của máy (theo Cài đặt hệ thống)</option>' + zhVoices.map((v, i) => '<option value="' + esc(zhKeys[i]) + '"' + (S.set.voice === zhKeys[i] ? ' selected' : '') + '>' + esc(voiceName(i)) + '</option>').join('') + '</select>' : '') + (useSys && zhVoices.length ? 'Đang dùng: <b>giọng mặc định của máy</b>' + (isIOS() ? ' = giọng chọn ở Cài đặt iPhone → Trợ năng → Nội dung được đọc → Giọng nói → Tiếng Trung → Mandarin.' : '.') : zhVoice ? 'Đang dùng giọng: <b>' + esc(voiceName(zhVoices.indexOf(zhVoice))) + '</b>' : 'Chưa thấy giọng tiếng Trung. Windows: Cài đặt → Thời gian và ngôn ngữ → Giọng nói → thêm Chinese (Simplified). Android thiếu giọng: Cài đặt → Chuyển văn bản thành giọng nói → Google → cài dữ liệu Chinese. iPhone thường có sẵn.') + '</p></div>' +
     '<div class="card"><h2>Thẻ và pinyin</h2><label class="sw"><span>Tô màu pinyin theo thanh điệu<br>' + tl + '</span><input type="checkbox" id="tone"' + (S.set.tone === false ? '' : ' checked') + '></label>' +
     '<label class="sw"><span>Hiện pinyin ở mặt trước (kiểu nhìn chữ → nghĩa)</span><input type="checkbox" id="pyf"' + (S.set.pyFront ? ' checked' : '') + '></label>' +
     '<label class="sw"><span>Hiện hình minh họa bên cạnh nghĩa</span><input type="checkbox" id="emo"' + (S.set.emo === false ? '' : ' checked') + '></label>' +
-    '<label class="sw"><span>Rung nhẹ khi lật và chấm thẻ (thử nghiệm trên iPhone)</span><input type="checkbox" id="hap"' + (S.set.haptic ? ' checked' : '') + '></label></div>' +
+    '<label class="sw"><span>Rung nhẹ khi lật và chấm thẻ (iPhone cần iOS 18 trở lên)</span><input type="checkbox" id="hap"' + (S.set.haptic ? ' checked' : '') + '></label></div>' +
     '<div class="card"><h2>Luyện viết</h2><label class="sw"><span><b>Chỉ tập viết chữ ★</b><br><span class="small mute">' + HW.size + ' chữ trong danh sách viết tay của đề cương. Tắt thì tập viết cả ' + Object.keys(FIRSTN).length + ' chữ như trước.</span></span><input type="checkbox" id="hwo"' + (S.set.hwOnly === false ? '' : ' checked') + '></label></div>' +
     '<div class="card"><h2>Đồng bộ điện thoại ↔ máy tính</h2>' + (G ?
       '<p class="small">Đang đồng bộ qua gist bí mật của <b>' + esc(G.login) + '</b>. Trạng thái: <span id="syncst">' + esc(syncMsg) + '</span></p>' +
@@ -1430,6 +1437,7 @@ function vSettings() {
   $('#rauto').onchange = e => { S.set.rateAuto = e.target.checked; saveLocal(); vSettings(); };
   const rt = $('#rate'); if (rt) rt.oninput = e => { S.set.rate = +e.target.value; $('#rv').textContent = S.set.rate; saveLocal(); };
   $('#test').onclick = () => say('你好，我是学生。');
+  $('#sndh').onclick = soundHelp;
   const vsel = $('#vsel'); if (vsel) vsel.onchange = e => { S.set.voice = e.target.value; saveLocal(); pickVoice(); say('你好，我是学生。'); vSettings(); };
   $('#pyf').onchange = e => { S.set.pyFront = e.target.checked; saveLocal(); };
   $('#hwo').onchange = e => { S.set.hwOnly = e.target.checked; saveLocal(); };
@@ -2208,7 +2216,7 @@ function startMode(type) {
 // ---------- 5. KIỂM TRA MÁY ----------
 let diagRes = null;
 function vDiag() {
-  const h = '<div class="row" style="margin-bottom:12px"><button class="btn" id="dback">‹ Cài đặt</button></div><div class="card"><h2>Kiểm tra máy</h2><p class="small mute" style="margin-top:0">Bấm chạy, đợi khoảng 10 giây. Máy sẽ đọc thử một câu, hỏi quyền micro và rung nhẹ một lần. Xong bấm "Chép kết quả" gửi t nếu có mục báo lỗi.</p><button class="btn p wide" id="drun">Chạy kiểm tra</button><div id="dlist" style="margin-top:12px"></div></div>';
+  const h = '<div class="row" style="margin-bottom:12px"><button class="btn" id="dback">‹ Cài đặt</button></div><div class="card"><h2>Kiểm tra máy</h2><p class="small mute" style="margin-top:0">Trước khi chạy: tắt chế độ im lặng, tăng âm lượng. Bấm chạy, đợi khoảng 15 giây: máy đọc thử 2 câu, hỏi quyền micro và rung nhẹ một lần. Xong bấm "Chép kết quả" gửi t nếu có mục báo lỗi.</p><button class="btn p wide" id="drun">Chạy kiểm tra</button><div id="dlist" style="margin-top:12px"></div></div>';
   $('#app').innerHTML = h;
   $('#dback').onclick = () => { meTab = 'set'; vMe(); };
   $('#drun').onclick = runDiag;
@@ -2218,7 +2226,13 @@ function drawDiag() {
   const el = $('#dlist'); if (!el) return;
   el.innerHTML = diagRes.map(r => '<div class="drow"><span class="dst ' + r[0] + '">' + ({ ok: '✓', bad: '✗', warn: '!', wait: '…', ask: '?' }[r[0]]) + '</span><div><b>' + esc(r[1]) + '</b><div class="small mute">' + r[2] + '</div></div></div>').join('') +
     (diagRes.some(r => r[0] === 'wait') ? '' : '<div class="row" style="margin-top:12px"><button class="btn" id="dcopy">Chép kết quả</button></div>');
-  el.querySelectorAll('[data-hap]').forEach(b => b.onclick = () => { const r = diagRes.find(z => z[1] === 'Rung khi chấm thẻ'); r[0] = b.dataset.hap === '1' ? 'ok' : 'warn'; r[2] = b.dataset.hap === '1' ? 'Có rung' : 'Không rung: iPhone chặn rung với ứng dụng web. Có thể tắt mục rung trong Cài đặt.'; drawDiag(); });
+  el.querySelectorAll('[data-hap]').forEach(b => b.onclick = () => {
+    if (b.dataset.hap === '2') { hapticForce(); return; }
+    const r = diagRes.find(z => z[1] === 'Rung khi chấm thẻ'), yes = b.dataset.hap === '1';
+    S.set.haptic = yes; saveLocal();
+    r[0] = yes ? 'ok' : 'warn'; r[2] = yes ? 'Có rung · đã bật rung khi lật và chấm thẻ' : 'Không rung: máy này không cho ứng dụng web rung. Đã tắt rung, app vẫn chạy bình thường.'; drawDiag();
+  });
+  el.querySelectorAll('[data-sndhelp]').forEach(a => a.onclick = ev => { ev.preventDefault(); soundHelp(); });
   const c = $('#dcopy'); if (c) c.onclick = async () => { const txt = 'Kiểm tra app HSK3 ' + APPV + ' · ' + new Date().toLocaleString('vi-VN') + '\n' + diagRes.map(r => '[' + r[0] + '] ' + r[1] + ': ' + r[2].replace(/<[^>]+>/g, '')).join('\n'); try { await navigator.clipboard.writeText(txt); toast('Đã chép, dán vào chat với Claude'); } catch (e) { window.prompt('Chép thủ công:', txt); } };
 }
 async function runDiag() {
@@ -2233,8 +2247,9 @@ async function runDiag() {
   set('Giọng tiếng Trung', zh.length ? 'ok' : 'bad', zh.length ? zh.length + ' giọng: ' + esc(zh.slice(0, 6).map(v => v.name + ' (' + v.lang + ')').join(', ')) : 'Không thấy giọng tiếng Trung nào');
   set('Giọng nam cho hội thoại', V.same ? 'warn' : 'ok', V.same ? 'Máy chỉ có giọng nữ; app hạ cao độ để giả giọng nam. Muốn giọng nam thật: Cài đặt iPhone → Trợ năng → Nội dung được đọc → Giọng nói → Tiếng Trung → tải giọng Li-mu.' : 'Có giọng nam: ' + esc(V.m.name));
   set('Đọc thử', 'wait', 'Đang đọc 你好…');
-  const spoke = await new Promise(res => { try { speechSynthesis.cancel(); const u = new SpeechSynthesisUtterance('你好'); u.lang = 'zh-CN'; u.rate = 1; if (zhVoice) u.voice = zhVoice; let done = false; u.onstart = () => { done = true; res(true); }; u.onerror = e => { if (!done) { done = true; res('err:' + (e.error || '')); } }; speechSynthesis.speak(u); setTimeout(() => { if (!done) res(false); }, 3500); } catch (e) { res('err'); } });
-  set('Đọc thử', spoke === true ? 'ok' : 'bad', spoke === true ? 'Máy đã phát tiếng (nếu không nghe thấy: gạt nút im lặng, tăng âm lượng)' : 'Không phát được tiếng (' + spoke + '). Thử vuốt đóng hẳn app rồi mở lại.');
+  try { if (navigator.audioSession) navigator.audioSession.type = 'playback'; } catch (e) {}
+  const spoke = await speakTest('你好');
+  set('Đọc thử', spoke === true ? 'ok' : 'bad', spoke === true ? 'Máy báo đã phát tiếng. Nếu không nghe thấy gì thì gần như chắc là đang để im lặng hoặc âm lượng nhỏ: <a href="#" data-sndhelp="1">xem cách sửa</a>' : 'Không phát được tiếng (' + spoke + '). <a href="#" data-sndhelp="1">Xem cách sửa</a>');
   // micro
   if (!(navigator.mediaDevices && window.MediaRecorder)) set('Micro (luyện nói)', 'bad', 'Trình duyệt này không hỗ trợ ghi âm trong app');
   else {
@@ -2249,9 +2264,15 @@ async function runDiag() {
       set('Micro (luyện nói)', size > 0 ? 'ok' : 'bad', size > 0 ? 'Ghi được ' + (size / 1024).toFixed(1) + ' KB (' + (mt || 'mặc định') + ')' : 'Ghi âm rỗng');
     } catch (e) { set('Micro (luyện nói)', 'bad', e && e.name === 'NotAllowedError' ? 'Chưa cho phép micro: Cài đặt iPhone → Safari (hoặc tên app) → Micro → Cho phép' : 'Không mở được micro (' + esc(e && e.name || '') + ')'); }
   }
+  if (navigator.mediaDevices && window.MediaRecorder) {
+    try { if (navigator.audioSession) navigator.audioSession.type = 'playback'; } catch (e) {}
+    const spoke2 = await speakTest('谢谢');
+    set('Đọc lại sau khi dùng micro', spoke2 === true ? 'ok' : 'bad', spoke2 === true ? 'Vẫn phát được tiếng sau khi dùng micro' : 'Sau khi dùng micro máy không phát tiếng nữa: tắt hẳn app rồi mở lại');
+  }
   // rung
-  haptic();
-  set('Rung khi chấm thẻ', 'ask', 'Vừa rồi máy có rung nhẹ không? <button class="btn small" data-hap="1">Có</button> <button class="btn small" data-hap="0">Không</button>');
+  const iv = iosVer();
+  if (iv && iv < 18) set('Rung khi chấm thẻ', 'warn', 'iOS ' + iv.toFixed(1).replace(/\.?0+$/, '') + ' chưa cho ứng dụng web rung (cần iOS 18 trở lên). App vẫn chạy bình thường, chỉ không rung.');
+  else { hapticForce(); set('Rung khi chấm thẻ', 'ask', 'Vừa rồi máy có rung nhẹ không? <button class="btn small" data-hap="1">Có</button> <button class="btn small" data-hap="0">Không</button> <button class="btn small ghost" data-hap="2">Thử lại</button>'); }
   // bộ nhớ
   let lsOk = false; try { localStorage.setItem('hsk3-diag', '1'); lsOk = localStorage.getItem('hsk3-diag') === '1'; localStorage.removeItem('hsk3-diag'); } catch (e) {}
   let persisted = null, est = null; try { persisted = navigator.storage && navigator.storage.persisted ? await navigator.storage.persisted() : null; est = navigator.storage && navigator.storage.estimate ? await navigator.storage.estimate() : null; } catch (e) {}
@@ -2263,9 +2284,19 @@ async function runDiag() {
   // bản offline
   let sw = 'none'; try { sw = navigator.serviceWorker && navigator.serviceWorker.controller ? 'ok' : 'warn'; } catch (e) {}
   let ck = []; try { ck = await caches.keys(); } catch (e) {}
-  set('Chạy offline', sw === 'ok' && ck.some(k => k.startsWith('hsk3-app-')) ? 'ok' : 'warn', sw === 'ok' ? 'Đã có bản offline (' + ck.length + ' bộ nhớ đệm)' : 'Chưa có bản offline: mở app thêm 1–2 lần khi có mạng');
+  set('Chạy offline', sw === 'ok' && ck.some(k => k.startsWith('hsk3-app-')) ? 'ok' : 'warn', (sw === 'ok' ? 'Đã có bản offline. ' : 'Chưa có bản offline: mở app thêm 1–2 lần khi có mạng. ') + 'Không có mạng vẫn học, ôn, luyện đề, tập viết, nghe giọng đọc, ghi âm được; chỉ đồng bộ, gia sư đọc tiến độ và tải bản mới là cần mạng.');
   // dữ liệu
   set('Dữ liệu', 'ok', W.length + ' từ · ' + Object.keys(SK).length + ' chữ có nét · ' + GR.length + ' điểm ngữ pháp · ' + RD.length + ' bài đọc · ' + DL.length + ' hội thoại · ' + EX.s.length + ' câu');
+}
+function speakTest(t) {
+  return new Promise(res => {
+    try {
+      const ss = speechSynthesis; if (ss.speaking || ss.pending) ss.cancel();
+      let done = false, tries = 0;
+      const once = () => { tries++; const u = new SpeechSynthesisUtterance(t); u.lang = 'zh-CN'; u.rate = 1; u.volume = 1; if (zhVoice) u.voice = zhVoice; u.onstart = () => { if (!done) { done = true; res(true); } }; u.onerror = e => { if (!done && tries > 1) { done = true; res('lỗi ' + (e.error || '')); } }; lastU = u; ss.speak(u); setTimeout(() => { if (done) return; if (tries < 2) { try { ss.cancel(); } catch (e) {} once(); } else { done = true; res('không có phản hồi'); } }, 1800); };
+      once();
+    } catch (e) { res('lỗi'); }
+  });
 }
 function vMe() { if (meTab === 'diag') return vDiag(); if (meTab === 'set') return vSettings(); vStats(); }
 
@@ -2276,6 +2307,74 @@ function summaryY() {
   const weakTypes = Object.keys(ts).filter(t => ts[t][1] >= 5).sort((a, b) => acc(ts[a]) - acc(ts[b])).slice(0, 3).map(t => TYPES[t] + ' ' + acc(ts[t]) + '%');
   return { skills14d: sk, vocabAcc14d: vocabAcc(14), estimateIfExamToday: { nghe: est.l.v, doc: est.r.v, viet: est.w.v }, weakestTypes: weakTypes, errorsOpen: openErrs().length, nextMilestone: m ? m.t + ' ' + fmt(dateOfN(m.n)) : null };
 }
+
+
+// =====================================================================
+// 14j: âm thanh trên iPhone + rung
+// =====================================================================
+// iOS chỉ cho web phát giọng đọc sau khi người dùng chạm màn hình lần đầu.
+// Nhiều chỗ app tự đọc sau một nhịp (setTimeout), nên phải "mở khoá" ngay lần chạm đầu tiên.
+let audioUnlocked = false, sndBad = 0;
+function unlockAudio() {
+  if (audioUnlocked) return; audioUnlocked = true;
+  try { if (navigator.audioSession) navigator.audioSession.type = 'playback'; } catch (e) {}
+  try { const u = new SpeechSynthesisUtterance(' '); u.volume = 0; u.lang = 'zh-CN'; u.__unlock = true; lastU = u; speechSynthesis.speak(u); } catch (e) {}
+}
+['touchend', 'click', 'keydown'].forEach(ev => document.addEventListener(ev, unlockAudio, { capture: true, passive: true }));
+// quay lại từ nền: iOS hay để bộ đọc ở trạng thái kẹt, xoá hàng đợi cho sạch
+document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') { try { speechSynthesis.cancel(); } catch (e) {} try { if (navigator.audioSession) navigator.audioSession.type = 'playback'; } catch (e) {} } });
+// ghi đè say(): tự đọc lại 1 lần nếu iOS nuốt mất câu
+function say(t) {
+  try {
+    const ss = speechSynthesis;
+    unlockAudio();
+    if ((ss.speaking || ss.pending) && !(lastU && lastU.__unlock)) ss.cancel();
+    try { ss.resume(); } catch (e) {}
+    const mk = () => { const u = new SpeechSynthesisUtterance(t); u.lang = 'zh-CN'; u.rate = rateNow(); u.volume = 1; if (zhVoice) u.voice = zhVoice; return u; };
+    let u = mk(), started = false;
+    const go = () => {
+      u.onstart = u.onend = () => { started = true; sndBad = 0; };
+      u.onerror = e => { if (e && e.error && e.error !== 'interrupted' && e.error !== 'canceled') { started = true; sndFail('Không đọc được (' + e.error + ')'); } };
+      lastU = u; ss.speak(u);
+    };
+    go();
+    clearTimeout(say.t);
+    say.t = setTimeout(() => {
+      if (started || lastU !== u) return;
+      try { ss.cancel(); } catch (e) {}
+      u = mk(); go();
+      say.t = setTimeout(() => { if (!started && lastU === u) sndFail(); }, 2200);
+    }, 1300);
+  } catch (e) { sndFail(); }
+}
+function sndFail(msg) {
+  sndBad++;
+  if (sndBad === 1 || msg) toastBtn((msg ? msg + '. ' : 'Máy chưa phát được tiếng. ') + 'Xem cách sửa?', soundHelp);
+}
+function toastBtn(txt, fn) {
+  let el = $('#tbtn');
+  if (!el) { el = document.createElement('button'); el.id = 'tbtn'; el.className = 'tbtn'; document.body.appendChild(el); }
+  el.textContent = txt; el.classList.add('on'); el.onclick = () => { el.classList.remove('on'); fn(); };
+  clearTimeout(toastBtn.t); toastBtn.t = setTimeout(() => el.classList.remove('on'), 7000);
+}
+function soundHelp() {
+  const ios = (navigator.userAgent.match(/OS (\d+)[_.](\d+)/) || []).slice(1).join('.');
+  $('#sheet .body').innerHTML = '<div class="grab"></div><h2>Không nghe thấy tiếng</h2><ol class="help">' +
+    '<li><b>Tắt chế độ im lặng.</b> Khi iPhone ở chế độ im lặng, giọng đọc của ứng dụng web thường bị tắt theo. Gạt công tắc bên hông máy (thấy vạch màu cam là đang im lặng). iPhone 15 Pro trở lên: mở Trung tâm điều khiển, bấm biểu tượng chuông để tắt im lặng.</li>' +
+    '<li><b>Tăng âm lượng lúc máy đang đọc.</b> Bấm Đọc thử bên dưới rồi bấm nút tăng âm lượng ngay khi máy đang đọc.</li>' +
+    '<li><b>Tai nghe Bluetooth.</b> Đang kết nối tai nghe thì tiếng ra tai nghe, không ra loa.</li>' +
+    '<li><b>Giọng tiếng Trung.</b> Cài đặt → Trợ năng → Nội dung được đọc → Giọng nói → Tiếng Trung (Trung Quốc đại lục) → chọn một giọng và tải về (Tingting, Li-mu…).</li>' +
+    '<li><b>Tắt hẳn app rồi mở lại.</b> Vuốt từ đáy màn hình lên, gạt app HSK 3 đi, rồi mở lại. iOS đôi khi làm kẹt giọng đọc sau khi app chạy nền hoặc sau khi dùng micro.</li>' +
+    '<li><b>Vẫn không được:</b> mở link app bằng Safari và bấm Đọc thử. Safari có tiếng mà app ngoài màn hình chính không có thì vào Tôi → Cài đặt → Kiểm tra máy, chép kết quả gửi Claude.</li></ol>' +
+    '<div class="row" style="justify-content:center;margin-top:10px"><button class="btn p" id="shTest">Đọc thử 你好</button><button class="btn" id="shDiag">Kiểm tra máy</button></div>' +
+    (ios ? '<p class="small mute" style="margin-top:10px">Máy này: iOS ' + esc(ios) + '</p>' : '');
+  $('#sheet').classList.add('on');
+  $('#shTest').onclick = () => say('你好，我是学生。');
+  $('#shDiag').onclick = () => { closeSheet(); meTab = 'diag'; go('me'); };
+}
+// rung: iPhone không có rung cho web; app dùng mẹo công tắc của iOS 18 trở lên
+const iosVer = () => { const m = navigator.userAgent.match(/OS (\d+)[_.](\d+)/); return m ? +m[1] + (+m[2]) / 100 : null; };
+function hapticForce() { try { if (navigator.vibrate) navigator.vibrate(20); else { const l = $('#hpl'); if (l) l.click(); } } catch (e) {} }
 
 render();
 boot();
