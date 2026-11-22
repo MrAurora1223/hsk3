@@ -1,6 +1,6 @@
 // Service worker cho app HSK 3: chạy offline, tự cập nhật ngầm.
 const PREFIX = 'hsk3-app-';
-const V = PREFIX + '1006d37b32';
+const V = PREFIX + '6df49ac31a';
 const FONTS = 'hsk-fonts';
 const CORE = ['./', './index.html', './manifest.webmanifest', './icon-192.png', './icon-512.png', './icon-maskable-512.png', './apple-touch-icon.png'];
 
@@ -31,6 +31,9 @@ self.addEventListener('fetch', e => {
 
   // GitHub API (đồng bộ) và các host khác: không can thiệp
   if (u.origin !== self.location.origin) return;
+
+  // 23e: file .ics (nhắc học) đi thẳng lên mạng, không trả index.html thay cho nó, để iPhone mở được bảng "Thêm vào Lịch"
+  if (u.pathname.endsWith('.ics')) return;
 
   // File của app: trả bản trong cache ngay (mở tức thì, chạy offline), đồng thời tải bản mới ngầm
   e.respondWith(caches.open(V).then(async c => {

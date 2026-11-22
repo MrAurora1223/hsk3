@@ -539,7 +539,7 @@ function toast(m) { const t = $('#toast'); t.textContent = m; t.classList.add('o
 // ---------- state ----------
 // S.c[order] = [box, dueN, lapses, introN, updatedMs]; S.d[N][device] = [seconds, newCount, reviewCount, correctCount]
 const LS_KEY = 'hsk3-giaotrinh-v1';
-const APPV = '2026.11.23d';
+const APPV = '2026.11.23e';
 let S = { c: {}, d: {}, w: {}, x: [], t: [], k: [], r: [], s: {}, e: {}, set: { rate: 0.8, pyFront: false, tone: true, modes: ['nghia','chu','nghe','viet'] } };
 let DEV = 'd' + Math.random().toString(36).slice(2, 8);
 try { const x = JSON.parse(localStorage.getItem(LS_KEY) || 'null'); if (x && x.c) S = Object.assign(S, x); const dv = localStorage.getItem(LS_KEY + '-dev'); if (dv) DEV = dv; else localStorage.setItem(LS_KEY + '-dev', DEV); } catch (e) {}
@@ -1448,7 +1448,7 @@ function vSettings() {
     '<label class="sw"><span>Hiện pinyin ở mặt trước (kiểu nhìn chữ → nghĩa)</span><input type="checkbox" id="pyf"' + (S.set.pyFront ? ' checked' : '') + '></label>' +
     '<label class="sw"><span>Hiện hình minh họa bên cạnh nghĩa</span><input type="checkbox" id="emo"' + (S.set.emo === false ? '' : ' checked') + '></label>' +
     '<label class="sw"><span>Rung nhẹ khi lật và chấm thẻ (iPhone cần iOS 18 trở lên)</span><input type="checkbox" id="hap"' + (S.set.haptic ? ' checked' : '') + '></label></div>' +
-    '<div class="card"><h2>Nhắc học hằng ngày</h2><p class="small mute" style="margin-top:0">App web không tự gửi thông báo được, nên dùng Lịch iPhone: bấm một giờ, iPhone hỏi thêm vào Lịch thì bấm Thêm. Lịch sẽ nhắc mỗi ngày tới ngày thi. Muốn bỏ: mở Lịch, xoá sự kiện "Học HSK 3".</p><div class="row"><a class="btn" href="nhac-hoc-0630.ics" target="_blank" rel="noopener">6:30 sáng</a><a class="btn" href="nhac-hoc-1230.ics" target="_blank" rel="noopener">12:30 trưa</a><a class="btn p" href="nhac-hoc-2030.ics" target="_blank" rel="noopener">20:30 tối</a></div></div>' +
+    '<div class="card"><h2>Nhắc học hằng ngày</h2><p class="small mute" style="margin-top:0">App web không tự gửi thông báo được, nên dùng Lịch iPhone: bấm một giờ, iPhone hỏi thêm vào Lịch thì bấm Thêm. Lịch sẽ nhắc mỗi ngày tới ngày thi. Muốn bỏ: mở Lịch, xoá sự kiện "Học HSK 3". Ba nút chỉ là 3 giờ để chọn, không nút nào đang bật; muốn đổi giờ thì xoá sự kiện cũ trong Lịch rồi bấm giờ mới.</p><div class="row"><a class="btn" href="nhac-hoc-0630.ics" target="_blank" rel="noopener">6:30 sáng</a><a class="btn" href="nhac-hoc-1230.ics" target="_blank" rel="noopener">12:30 trưa</a><a class="btn" href="nhac-hoc-2030.ics" target="_blank" rel="noopener">20:30 tối</a></div></div>' +
     '<div class="card"><h2>Luyện viết</h2><label class="sw"><span><b>Chỉ tập viết chữ ★</b><br><span class="small mute">' + HW.size + ' chữ trong danh sách viết tay của đề cương. Tắt thì tập viết cả ' + Object.keys(FIRSTN).length + ' chữ như trước.</span></span><input type="checkbox" id="hwo"' + (S.set.hwOnly === false ? '' : ' checked') + '></label></div>' +
     '<div class="card"><h2>Đồng bộ điện thoại ↔ máy tính</h2>' + (G ?
       '<p class="small">Đang đồng bộ qua gist bí mật của <b>' + esc(G.login) + '</b>. Trạng thái: <span id="syncst">' + esc(syncMsg) + '</span></p><p class="small" id="gstat">Đang đọc trạng thái gist…</p>' +
