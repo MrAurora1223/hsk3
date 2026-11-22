@@ -539,7 +539,7 @@ function toast(m) { const t = $('#toast'); t.textContent = m; t.classList.add('o
 // ---------- state ----------
 // S.c[order] = [box, dueN, lapses, introN, updatedMs]; S.d[N][device] = [seconds, newCount, reviewCount, correctCount]
 const LS_KEY = 'hsk3-giaotrinh-v1';
-const APPV = '2026.11.23c';
+const APPV = '2026.11.23d';
 let S = { c: {}, d: {}, w: {}, x: [], t: [], k: [], r: [], s: {}, e: {}, set: { rate: 0.8, pyFront: false, tone: true, modes: ['nghia','chu','nghe','viet'] } };
 let DEV = 'd' + Math.random().toString(36).slice(2, 8);
 try { const x = JSON.parse(localStorage.getItem(LS_KEY) || 'null'); if (x && x.c) S = Object.assign(S, x); const dv = localStorage.getItem(LS_KEY + '-dev'); if (dv) DEV = dv; else localStorage.setItem(LS_KEY + '-dev', DEV); } catch (e) {}
@@ -1451,8 +1451,8 @@ function vSettings() {
     '<div class="card"><h2>Nhắc học hằng ngày</h2><p class="small mute" style="margin-top:0">App web không tự gửi thông báo được, nên dùng Lịch iPhone: bấm một giờ, iPhone hỏi thêm vào Lịch thì bấm Thêm. Lịch sẽ nhắc mỗi ngày tới ngày thi. Muốn bỏ: mở Lịch, xoá sự kiện "Học HSK 3".</p><div class="row"><a class="btn" href="nhac-hoc-0630.ics" target="_blank" rel="noopener">6:30 sáng</a><a class="btn" href="nhac-hoc-1230.ics" target="_blank" rel="noopener">12:30 trưa</a><a class="btn p" href="nhac-hoc-2030.ics" target="_blank" rel="noopener">20:30 tối</a></div></div>' +
     '<div class="card"><h2>Luyện viết</h2><label class="sw"><span><b>Chỉ tập viết chữ ★</b><br><span class="small mute">' + HW.size + ' chữ trong danh sách viết tay của đề cương. Tắt thì tập viết cả ' + Object.keys(FIRSTN).length + ' chữ như trước.</span></span><input type="checkbox" id="hwo"' + (S.set.hwOnly === false ? '' : ' checked') + '></label></div>' +
     '<div class="card"><h2>Đồng bộ điện thoại ↔ máy tính</h2>' + (G ?
-      '<p class="small">Đang đồng bộ qua gist bí mật của <b>' + esc(G.login) + '</b>. Trạng thái: <span id="syncst">' + esc(syncMsg) + '</span></p>' +
-      '<div class="row"><button class="btn p" id="gsNow">Đồng bộ ngay</button><button class="btn" id="gsTok">Chép token (để dán sang máy kia)</button><button class="btn" id="gsOff">Ngắt đồng bộ trên máy này</button></div>' +
+      '<p class="small">Đang đồng bộ qua gist bí mật của <b>' + esc(G.login) + '</b>. Trạng thái: <span id="syncst">' + esc(syncMsg) + '</span></p><p class="small" id="gstat">Đang đọc trạng thái gist…</p>' +
+      '<div class="row"><button class="btn p" id="gsNow">Đồng bộ ngay</button><button class="btn" id="gsPush">Đẩy tóm tắt lên gist ngay</button><button class="btn" id="gsTok">Chép token (để dán sang máy kia)</button><button class="btn" id="gsOff">Ngắt đồng bộ trên máy này</button></div>' +
       '<h3>Link tiến độ cho gia sư 6:04</h3><p class="small mute">Dùng link api.github.com này; link gist.githubusercontent.com bị chặn với công cụ đọc web của Claude. Cách chắc nhất: bấm "Chép lời nhắn cho gia sư" rồi dán vào ô yêu cầu của tác vụ gia sư buổi sáng.</p><code>' + esc(tutorURL()) + '</code><div class="row" style="margin-top:8px"><button class="btn p" id="gsMsg2">Chép lời nhắn cho gia sư</button><button class="btn" id="gsLink">Chép link</button></div>'
       : '<p class="small mute">Dán token GitHub (chỉ cần quyền <b>gist</b>) rồi bấm Kết nối. Máy đầu tiên tạo 1 gist bí mật để lưu tiến độ; máy sau dán cùng token là tự tìm ra gist đó và gộp dữ liệu.</p><input type="password" id="gsIn" placeholder="ghp_… hoặc github_pat_…" autocomplete="off" autocapitalize="off" spellcheck="false"><div class="row" style="margin-top:10px"><button class="btn p" id="gsGo">Kết nối</button></div><p class="small" id="gsMsg"></p>') + '</div>' +
     '<div class="card"><h2>Sao lưu file</h2><p class="small mute">Tải file sao lưu về máy, nên làm mỗi Chủ nhật. Nhập lại file thì dữ liệu được gộp, không mất bản đang có.</p><div class="row"><button class="btn" id="bkDl">Tải file sao lưu</button>' + (localStorage.getItem(OLD_KEY) ? '<button class="btn" id="bkOld">Tải tiến độ cũ (trước 23/11)</button>' : '') + '<button class="btn" id="bkSum">Chép tóm tắt tiến độ</button><label class="btn">Nhập file sao lưu<input type="file" id="bkUp" accept=".json,application/json" hidden></label></div></div>' +
@@ -1481,6 +1481,8 @@ function vSettings() {
     }
   });
   on('#gsNow', async () => { await syncNow(); vSettings(); });
+  on('#gsPush', async () => { const b = $('#gsPush'); b.disabled = true; b.textContent = 'Đang đẩy…'; dirty = true; await flush(); await gistStatus(); b.disabled = false; b.textContent = 'Đẩy tóm tắt lên gist ngay'; toast(syncMsg); });
+  gistStatus();
   on('#gsTok', () => copy(G.t, 'Đã chép token. Dán vào Cài đặt của app trên máy kia, xong thì xoá tin nhắn chứa token.'));
   on('#gsLink', () => copy(tutorURL(), 'Đã chép link'));
   on('#gsMsg2', () => copy(tutorMsg(), 'Đã chép lời nhắn, dán vào tác vụ gia sư'));
@@ -1966,7 +1968,7 @@ function summaryX() {
   };
 }
 MODES.splice(MODES.length - 1, 0, ['gram', '法', 'Ngữ pháp', 'Xếp câu theo mẫu ngữ pháp của bài', 12]);
-const tutorMsg = () => 'Tiến độ học HSK 3 của t nằm trong app HSK 3 (app chính, cài ngoài Claude: https://mraurora1223.github.io/hsk3/). Dùng WebFetch đọc ' + tutorURL() + ' rồi lấy files["hsk3-summary.json"].content (là JSON). Không dùng link gist.githubusercontent.com vì bị chặn. App flashcard trong Claude là bản cũ, không dùng.';
+const tutorMsg = () => 'Bạn là gia sư tiếng Trung HSK 3 của Chung. Mỗi sáng gửi 1 bài học ngắn (đọc trên điện thoại khoảng 5 phút), viết tiếng Việt, xưng t – m.\n\n1. LẤY DỮ LIỆU (WebFetch có bộ nhớ đệm, phải tránh đọc phải bản cũ)\n- Đọc https://api.github.com/gists/' + G.id + '?ngay=YYYY-MM-DD (thay YYYY-MM-DD bằng ngày hôm nay, giờ Việt Nam). Nếu công cụ không cho mở link có ?ngay= thì đọc link gốc https://api.github.com/gists/' + G.id + '. Lấy files[\"hsk3-summary.json\"].content (là JSON). Không dùng link gist.githubusercontent.com vì bị chặn. App flashcard cũ trong Claude không dùng nữa.\n- Kiểm tra asOf trong JSON và updated_at của gist: nếu cũ hơn 36 giờ thì đó là bản lưu đệm hoặc Chung chưa mở app. Khi đó ghi 1 dòng \"Số liệu app cập nhật lúc <asOf>\" và không dùng các con số tiến độ (dueToday, behindPlan, weak…).\n- Bài hôm nay lấy từ mục plan7d có date = hôm nay: bài sách, trang, ngữ pháp, từ mới (newWords), chữ phải viết tay (handwriting). Không có mục hôm nay thì tính theo file claude_lo-trinh-HSK3-theo-giao-trinh.md và Tu-vung-HSK3-theo-giao-trinh.csv trong project (Ngày 1 = thứ Hai 23/11/2026; N = số ngày từ 23/11/2026 + 1; từ mới = các dòng CSV có Ngày học = hôm nay).\n\n2. BÀI BUỔI SÁNG (theo thứ tự)\na) 1 dòng: Ngày N · tuần · bài sách (trang) · còn X ngày tới thi CN 16/5/2027.\nb) Tiến độ từ app (chỉ khi số liệu mới), 2–3 dòng: thẻ đến hạn (dueToday), trễ lịch (behindPlan), từ hay quên (weak), chữ hay viết sai (writeWeak), dạng bài yếu nhất (weakestTypes), sổ lỗi sai (errorsOpen). Trễ lịch thì nhắc: app tự bù 5 từ mỗi buổi, cứ bấm \"Bắt đầu học hôm nay\"; ngày bận chọn bản 10 phút.\nc) Từ mới hôm nay: bảng Chữ Hán | pinyin | Hán Việt | nghĩa, mỗi từ 1 câu ví dụ ngắn.\nd) Ngữ pháp hôm nay: công thức + giải thích 2 dòng + 2 câu mẫu có pinyin và nghĩa.\ne) Luyện viết: các chữ trong handwriting (đã có số nét): bộ thủ, nét dễ sai; viết 6 ô mỗi chữ ra vở, vừa viết vừa đọc to.\nf) Bài tập 6 câu trộn: dịch Việt→Trung, điền từ, sắp xếp câu. Đáp án để cuối bài, dưới dòng \"Đáp án\".\ng) 1 dòng cuối: mở app, bấm \"Bắt đầu học hôm nay\".\n\n3. NGÀY ĐẶC BIỆT\n- Chủ nhật: không có từ mới; test tuần 10 câu từ các từ đã học trong tuần, kèm đáp án.\n- Tuần Tết 1–7/2/2027: chỉ ôn nhẹ, bài ngắn.\n- Mốc (nextMilestone và file lộ trình): nhắc trước 3 ngày; đúng ngày thì hướng dẫn làm đề.\n\n4. QUY TẮC\n- Chỉ dùng từ đã học (Ngày học ≤ hôm nay); tên riêng thì được.\n- Pinyin luôn có dấu. Ngắn gọn, không lan man.';
 
 
 // =====================================================================
@@ -2312,7 +2314,7 @@ async function runDiag() {
   set('Bộ nhớ', lsOk && idbOk ? (persisted === false ? 'warn' : 'ok') : 'bad', (lsOk ? 'Lưu tiến độ được' : 'KHÔNG lưu được tiến độ') + ' · ' + (idbOk ? 'lưu audio được' : 'không lưu được audio') + (est ? ' · đang dùng ' + (est.usage / 1048576).toFixed(1) + ' MB' : '') + (persisted === false ? ' · chưa được giữ cố định: iPhone có thể xoá nếu lâu không mở, nên bật đồng bộ' : ''));
   // đồng bộ
   if (!G) set('Đồng bộ', 'warn', 'Chưa bật: tiến độ chỉ nằm trên máy này, gia sư không đọc được');
-  else { set('Đồng bộ', 'wait', 'Đang thử kết nối gist…'); try { await gh('/gists/' + G.id); set('Đồng bộ', 'ok', 'Kết nối gist được · ' + esc(syncMsg) + '<br>Link gia sư: ' + esc(tutorURL())); } catch (e) { set('Đồng bộ', 'bad', 'Không kết nối được gist (' + esc(e.code || e.message || '') + '). Token có thể đã hết hạn.'); } }
+  else { set('Đồng bộ', 'wait', 'Đang thử kết nối gist…'); try { dirty = true; await flush(); const g = await gh('/gists/' + G.id); let asOf = ''; try { asOf = JSON.parse(g.files[F_SUM].content).asOf; } catch (e) {} const fresh = !!asOf && Math.abs(Date.now() - new Date(asOf).getTime()) < 180000; /* asOf do chính máy này ghi lúc vừa đẩy: so cùng một đồng hồ */ set('Đồng bộ', fresh ? 'ok' : 'bad', (fresh ? 'Vừa ghi lên gist thành công' : 'App đã đẩy nhưng gist KHÔNG đổi') + ' · gist cập nhật ' + esc(new Date(g.updated_at).toLocaleString('vi-VN')) + (asOf ? ' · tóm tắt ghi lúc ' + esc(new Date(asOf).toLocaleString('vi-VN')) : '') + ' · ' + esc(syncMsg) + '<br>Link gia sư: ' + esc(tutorURL())); } catch (e) { set('Đồng bộ', 'bad', 'Không kết nối được gist (' + esc(e.code || e.message || '') + '). Token có thể đã hết hạn.'); } }
   // bản offline
   let sw = 'none'; try { sw = navigator.serviceWorker && navigator.serviceWorker.controller ? 'ok' : 'warn'; } catch (e) {}
   let ck = []; try { ck = await caches.keys(); } catch (e) {}
@@ -2860,6 +2862,18 @@ function weekCard() {
     '<p class="small mute" style="margin-bottom:0">Chuẩn bị tuần sau: ' + vo + '; luyện lại chữ hay viết sai.</p></div>';
 }
 
+// ---------- 23d: đọc trạng thái gist thật (để biết app có ghi lên được không) ----------
+async function gistStatus() {
+  const el = $('#gstat'); if (!el || !G) return null;
+  const f = d => { const x = new Date(d); return isNaN(x) ? '?' : x.getHours() + ':' + String(x.getMinutes()).padStart(2, '0') + ' ' + x.getDate() + '/' + (x.getMonth() + 1); };
+  try {
+    const g = await gh('/gists/' + G.id);
+    let asOf = '', day = '?'; try { const sm = JSON.parse(g.files[F_SUM].content); asOf = sm.asOf; day = sm.dayN; } catch (e) {}
+    const age = (Date.now() - new Date(g.updated_at).getTime()) / 36e5;
+    if ($('#gstat')) $('#gstat').innerHTML = 'Trên gist: cập nhật lần cuối <b>' + f(g.updated_at) + '</b>' + (g.history ? ' · ' + (g.history.length >= 10 ? '10+' : g.history.length) + ' bản sửa' : '') + ' · tóm tắt ghi lúc ' + f(asOf) + ' (ngày ' + day + ')' + (age > 36 ? ' · <b style="color:var(--acc)">đã cũ, bấm "Đẩy tóm tắt lên gist ngay"</b>' : ' · <span class="okline">mới</span>');
+    return g;
+  } catch (e) { if ($('#gstat')) $('#gstat').textContent = 'Không đọc được gist (' + (e.code || e.message) + ')'; return null; }
+}
 render();
 boot();
 function boot() {
