@@ -401,6 +401,17 @@ ol.help li{margin:8px 0;font-size:14.5px;line-height:1.45}
 .pchars{font-size:24px;letter-spacing:2px;margin:6px 0}
 .pchars .ph{color:var(--ok)}.pchars .pm{color:var(--acc);text-decoration:underline}
 .pverd{font:700 15px var(--round)}.pverd.y{color:var(--ok)}.pverd.m{color:var(--warn)}.pverd.n{color:var(--acc)}
+
+/* ---------- 23c: học theo lượt ---------- */
+.flowc{padding:14px 16px}
+.btn.big{padding:17px 14px;font-size:17px;border-radius:18px}
+.fsteps{margin:12px 0}
+.fs{display:flex;align-items:center;gap:10px;padding:5px 0;font-size:14px}
+.fs i{flex:none;width:22px;height:22px;border-radius:99px;background:color-mix(in srgb,var(--ink) 8%,transparent);display:inline-flex;align-items:center;justify-content:center;font:700 12px var(--round);font-style:normal;color:var(--mute)}
+.fs.done i{background:var(--okbg);color:var(--ok)}.fs.done span{color:var(--mute);text-decoration:line-through}
+.fs.now i{background:var(--acc);color:#fff}.fs.now span{font-weight:650}
+.flowc .btn.wide:not(.p){margin-top:2px;font-size:14px;line-height:1.35;white-space:normal}
+.hero .cta .btn.small{width:100%}
 </style>
 </head>
 <body>
@@ -528,7 +539,7 @@ function toast(m) { const t = $('#toast'); t.textContent = m; t.classList.add('o
 // ---------- state ----------
 // S.c[order] = [box, dueN, lapses, introN, updatedMs]; S.d[N][device] = [seconds, newCount, reviewCount, correctCount]
 const LS_KEY = 'hsk3-giaotrinh-v1';
-const APPV = '2026.11.23a';
+const APPV = '2026.11.23c';
 let S = { c: {}, d: {}, w: {}, x: [], t: [], k: [], r: [], s: {}, e: {}, set: { rate: 0.8, pyFront: false, tone: true, modes: ['nghia','chu','nghe','viet'] } };
 let DEV = 'd' + Math.random().toString(36).slice(2, 8);
 try { const x = JSON.parse(localStorage.getItem(LS_KEY) || 'null'); if (x && x.c) S = Object.assign(S, x); const dv = localStorage.getItem(LS_KEY + '-dev'); if (dv) DEV = dv; else localStorage.setItem(LS_KEY + '-dev', DEV); } catch (e) {}
@@ -925,11 +936,11 @@ function vToday() {
     (tc.length && wDone < tc.length) ? ['Luyện viết ' + (tc.length - wDone) + ' chữ', () => startWrite(tc.filter(c => !(S.w[c] && S.w[c][1] === N)), 'Luyện viết hôm nay')] : ['Luyện đề 5 phút', () => go('prac', () => startMode('mix'))];
   const allDone = !s.due && !pend.length && (!tc.length || wDone >= tc.length);
   const est = Math.ceil((s.due * 8 + Math.min(pend.length, 20) * 50 + Math.max(0, tc.length - wDone) * 40) / 60);
+  const fh = flowHero();
   h += '<div class="card hero"><div class="seal"><b>' + left + '</b><span>ngày tới thi</span></div><div class="mute small">' + DOW[di.dw] + ' ' + fmt(d) + ' · tuần ' + di.w + '</div><div class="day">Ngày ' + N + '</div>' +
     '<div class="sub">' + (todays.length ? todays.length + ' từ mới hôm nay' + (tIn ? ', đã học ' + tIn : '') : (di.dw === 6 ? 'Chủ nhật: ôn và test tuần, không có từ mới' : 'Hôm nay chỉ ôn, không có từ mới')) + (allDone ? ' · <b class="okline">xong việc hôm nay</b>' : '') + '</div>' +
     (todays.length ? tilesHTML(todays) : '') +
-    '<div class="cta"><button class="btn p wide" id="next">' + next[0] + '</button>' + (est ? '<div class="small mute" style="text-align:center;margin-top:8px">Việc còn lại hôm nay khoảng ' + est + ' phút</div>' : '') + '</div>' +
-    (late ? '<div class="note">Đang trễ ' + late + ' từ so với lịch. App cho học từ trễ trước; bù mỗi ngày 3–5 từ là kịp trong 1 tuần.</div>' : '') + '</div>';
+    (fh ? '<div class="cta"><button class="btn small ghost" id="next">Chỉ làm 1 việc: ' + next[0] + '</button></div>' : '<div class="cta"><button class="btn p wide" id="next">' + next[0] + '</button></div>') + '</div>' + fh + weekCard();
   const revTot = rec[2] + s.due;
   h += '<div class="card tasks">' +
     '<button class="task" id="rv">' + ringSVG(revTot ? rec[2] / revTot : 1, !s.due) + '<div class="tx"><b>Ôn thẻ đến hạn</b><span>' + (s.due ? 'còn ' + s.due + ' thẻ' : 'hết thẻ đến hạn') + ' · hôm nay đã ôn ' + rec[2] + ' lượt</span></div><span class="go">›</span></button>' +
@@ -1118,6 +1129,7 @@ function grade(ok) {
 }
 function finish(stopped) {
   const t = sess ? sess.type : ''; const ok = sess ? sess.ok : 0; const nf = sess ? Object.keys(sess.fail).length : 0;
+  if (flow && !stopped && ((t === 'review' && flow.exp === 'rev') || (t === 'new' && flow.exp === 'new'))) { sess = null; flush(); flow.exp = null; return flowNext(); }
   sess = null; flush(); chrome();
   const s = stats(), np = newPending();
   $('#app').innerHTML = '<div class="card" style="text-align:center;padding:26px 18px">' + (stopped ? '' : '<div class="stamp">完</div>') + '<h2>' + (stopped ? 'Đã dừng' : 'Xong lượt này') + '</h2><p>' + (t === 'new' ? 'Đã học ' + ok + ' từ mới. Ngày mai các từ này quay lại để ôn.' : 'Đúng ' + ok + ' lượt, ' + nf + ' từ phải làm lại.') + '</p>' +
@@ -1136,6 +1148,7 @@ function startWrite(chars, title) {
   $('#stop').onclick = () => { sess = null; flush(); render(); };
   writePractice($('#wbox'), chars, { size: Math.min(260, window.innerWidth - 84) }, res => {
     sess = null; flush(); chrome();
+    if (flow && flow.exp === 'write') { flow.exp = null; return flowNext(); }
     const bad = res.filter(r => r.m >= 3).map(r => r.c);
     $('#app').innerHTML = '<div class="card" style="text-align:center"><div class="stamp">完</div><h2>Xong luyện viết</h2><table><tbody>' + res.map(r => '<tr><td class="h hz">' + esc(r.c) + '</td><td>' + strokeCount(r.c) + ' nét</td><td>' + (r.m ? 'sai ' + r.m + ' lần' : '<span class="tag k">chuẩn</span>') + '</td></tr>').join('') + '</tbody></table>' +
       '<p class="small mute">Giờ viết mỗi chữ 5–10 lần ra vở, vừa viết vừa đọc to.</p><div class="row" style="justify-content:center"><button class="btn p" id="wh">Về Hôm nay</button>' + (bad.length ? '<button class="btn" id="wa">Tập lại ' + bad.length + ' chữ sai nhiều</button>' : '') + '</div></div>';
@@ -1364,11 +1377,13 @@ function endRun() {
     S.x = S.x || []; S.x.push([Date.now(), N, L[0], L[1], R[0], R[1], Wp[0], Wp[1], Math.round((Date.now() - r.t0) / 1000), r.type === 'full' ? 1 : (r.ms || 0)]); markDirty();
     if (r.res.length < r.qs.length) h += '<p class="small mute">Hết giờ khi mới làm ' + r.res.length + '/' + r.qs.length + ' câu.</p>';
   }
-  h += '<div class="row" style="justify-content:center;margin-top:8px"><button class="btn p" id="again">Làm lượt khác</button><button class="btn" id="back">Về Luyện đề</button></div></div>';
+  const inFlow = flow && flow.exp === r.type;
+  h += '<div class="row" style="justify-content:center;margin-top:8px">' + (inFlow ? '<button class="btn p" id="fnext">' + (flow.i + 1 < flow.steps.length ? 'Tiếp bước sau' : 'Xong buổi học') + '</button>' : '<button class="btn p" id="again">Làm lượt khác</button><button class="btn" id="back">Về Luyện đề</button>') + '</div></div>';
   const bad = r.res.filter(z => !z.ok);
   if (bad.length) h += '<div class="card"><h2>Câu sai · ' + bad.length + '</h2><p class="small mute">Các từ sai đã vào danh sách ôn hôm nay.</p>' + bad.map(z => '<div style="border-top:1px solid var(--line);padding-top:6px;margin-top:6px">' + (z.your ? '<div class="small mute">Bạn chọn: ' + z.your + '</div>' : '') + (z.q.expl || '') + '</div>').join('') + '</div>';
   $('#app').innerHTML = h; flush();
-  $('#again').onclick = () => startMode(r.type); $('#back').onclick = () => { view = 'prac'; render(); };
+  if (inFlow) $('#fnext').onclick = () => { flow.exp = null; flowNext(); };
+  else { $('#again').onclick = () => startMode(r.type); $('#back').onclick = () => { view = 'prac'; render(); }; }
 }
 
 // ---------- TỪ THEO BÀI ----------
@@ -1433,6 +1448,7 @@ function vSettings() {
     '<label class="sw"><span>Hiện pinyin ở mặt trước (kiểu nhìn chữ → nghĩa)</span><input type="checkbox" id="pyf"' + (S.set.pyFront ? ' checked' : '') + '></label>' +
     '<label class="sw"><span>Hiện hình minh họa bên cạnh nghĩa</span><input type="checkbox" id="emo"' + (S.set.emo === false ? '' : ' checked') + '></label>' +
     '<label class="sw"><span>Rung nhẹ khi lật và chấm thẻ (iPhone cần iOS 18 trở lên)</span><input type="checkbox" id="hap"' + (S.set.haptic ? ' checked' : '') + '></label></div>' +
+    '<div class="card"><h2>Nhắc học hằng ngày</h2><p class="small mute" style="margin-top:0">App web không tự gửi thông báo được, nên dùng Lịch iPhone: bấm một giờ, iPhone hỏi thêm vào Lịch thì bấm Thêm. Lịch sẽ nhắc mỗi ngày tới ngày thi. Muốn bỏ: mở Lịch, xoá sự kiện "Học HSK 3".</p><div class="row"><a class="btn" href="nhac-hoc-0630.ics" target="_blank" rel="noopener">6:30 sáng</a><a class="btn" href="nhac-hoc-1230.ics" target="_blank" rel="noopener">12:30 trưa</a><a class="btn p" href="nhac-hoc-2030.ics" target="_blank" rel="noopener">20:30 tối</a></div></div>' +
     '<div class="card"><h2>Luyện viết</h2><label class="sw"><span><b>Chỉ tập viết chữ ★</b><br><span class="small mute">' + HW.size + ' chữ trong danh sách viết tay của đề cương. Tắt thì tập viết cả ' + Object.keys(FIRSTN).length + ' chữ như trước.</span></span><input type="checkbox" id="hwo"' + (S.set.hwOnly === false ? '' : ' checked') + '></label></div>' +
     '<div class="card"><h2>Đồng bộ điện thoại ↔ máy tính</h2>' + (G ?
       '<p class="small">Đang đồng bộ qua gist bí mật của <b>' + esc(G.login) + '</b>. Trạng thái: <span id="syncst">' + esc(syncMsg) + '</span></p>' +
@@ -2713,6 +2729,136 @@ function resetNote() {
 }
 document.addEventListener('click', e => { if (e.target.id === 'rsOk') { S.set.resetNote = 0; saveLocal(); render(); } });
 function summaryZ() { return { planStart: '2026-11-23', planNote: 'Bắt đầu lại 23/11/2026; dayN tính từ ngày này; Tết 1–7/2/2027 là tuần 11; thi 16/5/2027' }; }
+
+// ---------- 23b: tóm tắt cho gia sư kèm lịch 7 ngày tới (gia sư không cần đọc file project vẫn ra bài đúng ngày) ----------
+function summaryZ() {
+  const plan7d = [];
+  for (let n = Math.max(1, N); n <= Math.min(LAST, Math.max(1, N) + 6); n++) {
+    const di = DAYS[n - 1] || {}, d = dateOfN(n);
+    const ws = W.filter(x => x[1] === n);
+    const hw = Object.keys(FIRSTN).filter(c => FIRSTN[c] === n && HW.has(c)).sort((a, b) => FIRSTW[a] - FIRSTW[b]);
+    plan7d.push({
+      date: d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'),
+      dayN: n, week: di.w || null, dow: DOW[di.dw != null ? di.dw : (d.getDay() + 6) % 7],
+      lessons: (di.ls || []).map(z => { const L = LES[z[0] + '-' + z[1]] || []; return { lesson: lessonLabel(z[0], z[1]), page: L[2], grammar: L[4], today: z[2] }; }),
+      newWords: ws.map(x => [x[5], x[6], x[7], x[8]]),
+      handwriting: hw.map(c => c + ' ' + strokeCount(c)),
+      note: di.t || ''
+    });
+  }
+  return { planStart: '2026-11-23', planNote: 'Bắt đầu lại 23/11/2026; dayN tính từ ngày này; Tết 1–7/2/2027 là tuần 11; thi 16/5/2027', plan7d };
+}
+
+
+// =====================================================================
+// 23c: HỌC THEO LƯỢT — bấm 1 nút, app dẫn qua từng bước của hôm nay; có bản 10 phút cho ngày bận
+// =====================================================================
+let flow = null;
+const CATCH_PER_DAY = 5; // ngày thường: học thêm tối đa 5 từ trễ
+function flowPlan(mode) {
+  const busy = mode === 'busy', s = stats(), di = DAYS[Math.min(Math.max(N, 1), LAST) - 1] || {};
+  const pend = newPending(), todays = pend.filter(x => x[1] === N), late = pend.filter(x => x[1] < N);
+  const steps = [];
+  const dueCap = busy ? 30 : 80;
+  if (s.due) steps.push({ k: 'rev', label: 'Ôn ' + Math.min(s.due, dueCap) + ' thẻ đến hạn', est: Math.min(s.due, dueCap) * 8, run: () => { flow.exp = 'rev'; flowReview(dueCap); } });
+  // từ mới: hôm nay trước, rồi bù từ trễ (cũ nhất trước)
+  const lateSorted = late.slice().sort((a, b) => a[1] - b[1]);
+  // học theo đúng thứ tự giáo trình: từ trễ (cũ nhất) trước, rồi tới từ hôm nay; ngày thường tối đa 10 từ/lượt
+  const newList = lateSorted.concat(todays).slice(0, busy ? 5 : Math.min(10, todays.length + CATCH_PER_DAY));
+  const lateIn = newList.filter(x => x[1] < N).length;
+  if (newList.length) steps.push({ k: 'new', label: 'Học ' + newList.length + ' từ mới' + (lateIn ? ' (' + lateIn + ' từ bù)' : ''), est: newList.length * 50, run: () => { flow.exp = 'new'; view = 'study'; startNew(newList); } });
+  // viết đúng các chữ ★ của từ đang học trong lượt này; Chủ nhật luyện lại chữ hay viết sai
+  const sun = di.dw === 6;
+  const tc = sun ? weakChars().slice(0, 8) : [...new Set(newList.flatMap(x => hzChars(x[5])).filter(c => isW(c) && !S.w[c]).concat(todayChars().filter(c => FIRSTN[c] === N && !(S.w[c] && S.w[c][1] === N))))].slice(0, 15);
+  if (!busy && tc.length) steps.push({ k: 'write', label: sun ? 'Luyện lại ' + tc.length + ' chữ hay viết sai' : 'Tập viết ' + tc.length + ' chữ ★', est: tc.length * 40, run: () => { flow.exp = 'write'; startWrite(tc, 'Luyện viết hôm nay'); } });
+  if (!busy) {
+    const msT = MS.find(m => m.n === N && m.les && !(S.x || []).some(e => e[9] === m.k));
+    const wkDone = ((S.t || []).slice(-1)[0] || [])[1] === weekWords().w;
+    let p = null;
+    if (msT) p = { m: 'm:' + msT.k, label: msT.t + ' (app)', est: msT.cfg.sec };
+    else if (MS.find(m => m.n === N && m.k === 'full')) p = { m: 'full', label: 'Đề mô phỏng 70 câu', est: 4500 };
+    else if (di.dw === 6 && !wkDone && N >= 1) p = { m: 'week', label: 'Test tuần ' + weekWords().w, est: 360 };
+    else { const sg = suggestions().find(z => z.m !== 'err'); p = sg ? { m: sg.m, label: sg.t, est: 300 } : { m: 'dlg', les: lesNow(), label: 'Nghe hội thoại bài đang học', est: 240 }; }
+    steps.push({ k: 'prac', label: p.label, est: p.est, run: () => { flow.exp = p.m; if (p.les) pracLes = p.les; go('prac', () => startMode(p.m)); } });
+    if (openErrs().length >= 5) steps.push({ k: 'err', label: 'Sửa sổ lỗi sai (' + openErrs().length + ' câu)', est: 240, run: () => { flow.exp = 'err'; go('prac', () => startMode('err')); } });
+  }
+  return steps;
+}
+const flowMin = steps => Math.max(1, Math.round(steps.reduce((a, z) => a + z.est, 0) / 60));
+function flowReview(cap) {
+  const list = dueCards(); if (!list.length) return flowNext();
+  list.sort((a, b) => S.c[a][1] - S.c[b][1]);
+  const q = shuffle(list.slice(0, cap));
+  sess = { type: 'review', q, i: 0, ok: 0, fail: {}, total: q.length, show: false };
+  view = 'study'; render();
+}
+function flowStart(mode) {
+  const steps = flowPlan(mode);
+  if (!steps.length) return toast('Hôm nay xong hết việc rồi');
+  flow = { mode, steps, i: 0, day: N, t0: Date.now(), d0: daySum(N).slice() };
+  haptic(); steps[0].run();
+}
+function flowNext() {
+  if (!flow) return render();
+  flow.i++;
+  if (flow.i >= flow.steps.length) return flowDone();
+  leave(); view = 'today'; chrome(); window.scrollTo(0, 0);
+  const st = flow.steps;
+  $('#app').innerHTML = '<div class="card flowc"><div class="small mute">' + (flow.mode === 'busy' ? 'Bản 10 phút' : 'Buổi học hôm nay') + ' · bước ' + (flow.i + 1) + '/' + st.length + '</div>' +
+    '<div class="fsteps">' + st.map((z, i) => '<div class="fs ' + (i < flow.i ? 'done' : i === flow.i ? 'now' : '') + '"><i>' + (i < flow.i ? '✓' : i + 1) + '</i><span>' + esc(z.label) + '</span></div>').join('') + '</div>' +
+    '<button class="btn p wide" id="fgo">Tiếp: ' + esc(st[flow.i].label) + '</button><div class="row" style="justify-content:center;margin-top:10px"><button class="btn ghost" id="fskip">Bỏ qua bước này</button><button class="btn ghost" id="fstop">Dừng ở đây</button></div></div>';
+  $('#fgo').onclick = () => flow.steps[flow.i].run();
+  $('#fskip').onclick = () => flowNext();
+  $('#fstop').onclick = () => { flow = null; render(); };
+}
+function flowDone() {
+  const f = flow; flow = null; leave(); view = 'today'; chrome(); window.scrollTo(0, 0);
+  const d = daySum(N), mins = Math.max(1, Math.round((Date.now() - f.t0) / 60000));
+  const newW = d[1] - f.d0[1], rev = d[2] - f.d0[2], ok = d[3] - f.d0[3];
+  const nx = Math.min(LAST, N + 1), tw = W.filter(x => x[1] === nx);
+  $('#app').innerHTML = '<div class="card" style="text-align:center;padding:26px 18px"><div class="stamp">完</div><h2>Xong buổi học hôm nay</h2>' +
+    '<div class="parts"><div><b>' + mins + '</b><span>phút</span></div><div><b>' + newW + '</b><span>từ mới</span></div><div><b>' + (rev ? Math.round(100 * ok / rev) + '%' : '–') + '</b><span>đúng (' + rev + ' lượt)</span></div></div>' +
+    '<p class="small mute">Chuỗi ' + streak() + ' ngày. ' + (tw.length ? 'Mai: ' + tw.length + ' từ mới, ' + esc((DAYS[nx - 1].ls || []).map(z => lessonLabel(z[0], z[1]).split(':')[0]).join(', ')) + '.' : 'Mai không có từ mới.') + ' Nhớ viết chữ mới ra vở 田字格 và đọc to.</p>' +
+    '<button class="btn p" id="fhome">Về Hôm nay</button></div>';
+  $('#fhome').onclick = () => render();
+  flush();
+}
+// thẻ đầu màn Hôm nay
+function flowHero() {
+  if (N < 1 || N > LAST) return '';
+  if (flow && flow.day === N) {
+    const st = flow.steps;
+    return '<div class="card flowc"><div class="small mute">Đang học dở · bước ' + (flow.i + 1) + '/' + st.length + '</div><button class="btn p wide" id="fresume">Tiếp tục: ' + esc(st[flow.i].label) + '</button></div>';
+  }
+  const full = flowPlan('full'), busy = flowPlan('busy');
+  if (!full.length) return '';
+  const pend = newPending(), late = pend.filter(x => x[1] < N).length;
+  const catchDays = late ? Math.ceil(late / CATCH_PER_DAY) : 0;
+  return '<div class="card flowc"><button class="btn p wide big" id="fstart">Bắt đầu học hôm nay · khoảng ' + flowMin(full) + ' phút</button>' +
+    '<div class="fsteps small">' + full.map((z, i) => '<div class="fs"><i>' + (i + 1) + '</i><span>' + esc(z.label) + '</span></div>').join('') + '</div>' +
+    (busy.length ? '<button class="btn wide" id="fbusy">Bận? Bản ' + flowMin(busy) + ' phút: ' + esc(busy.map(z => z.label.toLowerCase()).join(' + ')) + '</button>' : '') +
+    (late ? '<p class="small" style="margin:10px 0 0"><b>Đang trễ ' + late + ' từ.</b> Mỗi buổi học app tự bù thêm ' + CATCH_PER_DAY + ' từ (cũ trước), khoảng ' + catchDays + ' ngày là kịp lịch; ngày bận bản 10 phút cũng ưu tiên từ trễ.</p>' : '') + '</div>';
+}
+document.addEventListener('click', e => {
+  const id = e.target.id;
+  if (id === 'fstart') flowStart('full');
+  else if (id === 'fbusy') flowStart('busy');
+  else if (id === 'fresume' && flow) flow.steps[flow.i].run();
+});
+// ---------- tổng kết tuần (Chủ nhật) ----------
+function weekCard() {
+  if (N < 1 || N > LAST) return '';
+  const di = DAYS[N - 1]; if (!di || di.dw !== 6) return '';
+  const n0 = N - 6; let mins = 0, nw = 0, rv = 0, ok = 0, act = 0;
+  for (let n = n0; n <= N; n++) { const r = daySum(n); mins += r[0]; nw += r[1]; rv += r[2]; ok += r[3]; if (r[1] + r[2] > 0) act++; }
+  const plan = W.filter(x => x[1] >= n0 && x[1] <= N).length;
+  const lt = (S.t || []).slice(-1)[0], tw = di.w, wk = weekWords();
+  const nextW = tw + 1, vo = nextW === 11 ? 'tuần 11 là Tết, không cần vở' : nextW === 12 ? 'in vở Tuan-11 (dùng cho tuần 12)' : nextW <= 22 ? 'in vở Tuan-' + String(nextW).padStart(2, '0') : 'tuần sau là luyện đề, không cần vở';
+  const ts = typeStats(7), weak = Object.keys(ts).filter(t => ts[t][1] >= 5).sort((a, b) => acc(ts[a]) - acc(ts[b]))[0];
+  return '<div class="card"><h2>Tổng kết tuần ' + tw + '</h2><div class="parts"><div><b>' + nw + '/' + plan + '</b><span>từ mới / kế hoạch</span></div><div><b>' + act + '/7</b><span>ngày có học</span></div><div><b>' + Math.round(mins / 60) + '</b><span>phút</span></div></div>' +
+    '<p class="small" style="margin:0">' + (rv ? 'Ôn ' + rv + ' lượt, đúng ' + Math.round(100 * ok / rv) + '%. ' : '') + (lt && lt[1] === wk.w ? 'Test tuần: ' + lt[2] + '/' + lt[3] + '. ' : 'Chưa làm test tuần. ') + (weak ? 'Dạng yếu nhất tuần này: ' + TYPES[weak] + ' (' + acc(ts[weak]) + '%). ' : '') + '</p>' +
+    '<p class="small mute" style="margin-bottom:0">Chuẩn bị tuần sau: ' + vo + '; luyện lại chữ hay viết sai.</p></div>';
+}
 
 render();
 boot();
